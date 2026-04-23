@@ -191,11 +191,12 @@ docker-compose up --build
 |:------|:-----------|:--------|
 | Runtime | Java 21 (Temurin) | Long-term support JDK |
 | Framework | Spring Boot 4.0.4 | REST API + dependency injection |
-| Database | PostgreSQL 16 | ACID-compliant RDBMS |
+| Database | PostgreSQL (Supabase) | Managed cloud PostgreSQL |
 | DB Access | Spring JDBC (JdbcTemplate) | Raw SQL execution — intentionally chosen over JPA to showcase SQL proficiency |
 | API Docs | springdoc-openapi 3.0.2 | Auto-generated Swagger UI |
 | Container | Docker + Docker Compose | Reproducible deployments |
-| Hosting | DigitalOcean App Platform | Production deployment |
+| API Hosting | DigitalOcean App Platform | Production API deployment |
+| DB Hosting | Supabase | Free-tier managed PostgreSQL |
 
 ---
 
