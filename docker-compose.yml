@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # ── PostgreSQL Database ─────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: sevak-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sevak_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./sql/sevak_ddl.sql:/docker-entrypoint-initdb.d/01-ddl.sql
+      - ./sql/sevak_data.sql:/docker-entrypoint-initdb.d/02-data.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Spring Boot API ─────────────────────────────────────
+  api:
+    build: .
+    container_name: sevak-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: jdbc:postgresql://db:5432/sevak_db
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: ${DB_PASSWORD:-changeme}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
