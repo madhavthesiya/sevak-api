@@ -2,7 +2,7 @@
 
 # ⬡ SEVAK — Service Marketplace API
 
-**A REST API built on a BCNF-normalized 23-table PostgreSQL schema**
+**A production-grade REST API built on a BCNF-normalized 23-table PostgreSQL schema**
 
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.4-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
@@ -20,15 +20,15 @@
 
 **SEVAK** is a hyperlocal home-services marketplace (similar to Urban Company) where customers can discover, book, and review service providers for tasks like electrical work, plumbing, cleaning, and painting.
 
-This project focuses on **database engineering** — featuring a normalized schema, SQL analytics, and a REST API layer built with Spring Boot and PostgreSQL.
+This project focuses on **database engineering excellence** — featuring a rigorously normalized schema, advanced SQL analytics, and a clean REST API layer that exposes the full power of PostgreSQL.
 
 ### Highlights
 
-- 🏗️ **23-table BCNF-normalized schema** with normalization proof
-- 📊 **19 REST endpoints** using JOINs, Window Functions, Derived Tables, STRING_AGG
-- ⚡ **Stored Procedures** for booking cancellation and confirmation
-- 🔄 **Database Triggers** for automatic rating recalculation
-- 📖 **Interactive Swagger UI** for API exploration
+- 🏗️ **23-table BCNF-normalized schema** with mathematical proof of compliance
+- 📊 **19 REST endpoints** showcasing advanced SQL (Window Functions, Derived Tables, STRING_AGG)
+- ⚡ **Stored Procedures** for transactional operations (booking cancellation/confirmation)
+- 🔄 **Database Triggers** for automatic rating recalculation on review insert
+- 📖 **Interactive Swagger UI** for live API exploration
 
 ---
 
@@ -238,7 +238,7 @@ sevak-api/
 
 ## 📊 Advanced SQL Showcase
 
-This project uses **Spring JDBC** instead of JPA/Hibernate to keep full control over SQL queries:
+This project intentionally uses **Spring JDBC** instead of JPA/Hibernate to demonstrate advanced SQL capabilities:
 
 <details>
 <summary><b>Window Function — Provider Leaderboard</b></summary>
