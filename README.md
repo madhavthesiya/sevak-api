@@ -75,7 +75,7 @@ This project focuses on **database engineering excellence** — featuring a rigo
 | **Auth** | 3 | `users`, `customers`, `admins` — ISA hierarchy with role-based access |
 | **Providers** | 4 | `service_providers`, `provider_documents`, `provider_availability`, `provider_services` |
 | **Services** | 3 | `categories`, `services`, `service_variants` — hierarchical catalog |
-| **Location** | 3 | `cities`, `areas`, `locations`, `customer_addresses` — BCNF-compliant geo data |
+| **Location** | 4 | `cities`, `areas`, `locations`, `customer_addresses` — BCNF-compliant geo data |
 | **Bookings** | 4 | `bookings`, `booking_items`, `booking_status_log`, `coupons` |
 | **Payments** | 2 | `payments`, `cancellations` — 1:1 with bookings |
 | **Reviews** | 3 | `provider_reviews`, `service_reviews`, `complaints` |
@@ -157,15 +157,21 @@ AFTER (BCNF compliant):
 git clone https://github.com/your-username/sevak-api.git
 cd sevak-api
 
-# 2. Set up database
+# 2. Configure environment
+cp .env.example .env
+# Edit .env and set your PostgreSQL password
+
+# 3. Set up database
 psql -U postgres -c "CREATE DATABASE sevak_db"
 psql -U postgres -d sevak_db -f sql/sevak_ddl.sql
 psql -U postgres -d sevak_db -f sql/sevak_data.sql
 
-# 3. Run the API
+# 4. Run the API
+export DB_PASSWORD=your_password   # Linux/Mac
+$env:DB_PASSWORD="your_password"   # Windows PowerShell
 mvn spring-boot:run
 
-# 4. Open Swagger UI
+# 5. Open Swagger UI
 open http://localhost:8080/swagger-ui.html
 ```
 
