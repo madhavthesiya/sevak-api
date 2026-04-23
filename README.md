@@ -34,34 +34,36 @@ This project focuses on **database engineering excellence** — featuring a rigo
 
 ## 🏛️ Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                     Swagger UI (Browser)                     │
-│              Interactive API Documentation                   │
-└──────────────────────┬───────────────────────────────────────┘
-                       │  HTTP (JSON)
-┌──────────────────────▼───────────────────────────────────────┐
-│                   Spring Boot 4.0.4                          │
-│  ┌─────────────┐  ┌──────────────┐  ┌──────────────────┐    │
-│  │ Controllers │→ │ Repositories │→ │   JdbcTemplate   │    │
-│  │ (REST URLs) │  │  (Raw SQL)   │  │ (Query Executor) │    │
-│  └─────────────┘  └──────────────┘  └────────┬─────────┘    │
-│  ┌─────────────┐  ┌──────────────┐           │              │
-│  │ CORS Config │  │  Error Hndlr │           │              │
-│  └─────────────┘  └──────────────┘           │              │
-└──────────────────────────────────────────────┼──────────────┘
-                                               │  JDBC
-┌──────────────────────────────────────────────▼──────────────┐
-│                    PostgreSQL 16                             │
-│  ┌────────────────────────────────────────────────────┐     │
-│  │           sevak schema (23 tables)                 │     │
-│  │  ┌───────┐ ┌──────────┐ ┌─────────┐ ┌─────────┐  │     │
-│  │  │ users │ │ bookings │ │ reviews │ │locations│  │     │
-│  │  └───┬───┘ └────┬─────┘ └────┬────┘ └────┬────┘  │     │
-│  │      └──────────┴────────────┴────────────┘       │     │
-│  │  Triggers · Stored Procedures · Indexes           │     │
-│  └────────────────────────────────────────────────────┘     │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    A["🌐 Swagger UI — Browser"] -->|HTTP JSON| B["Spring Boot 4.0.4"]
+
+    subgraph API["API Layer"]
+        B --> C["Controllers — REST URLs"]
+        C --> D["Repositories — Raw SQL"]
+        D --> E["JdbcTemplate"]
+    end
+
+    subgraph Config["Configuration"]
+        F["CORS"]
+        G["Error Handler"]
+        H["OpenAPI Docs"]
+    end
+
+    E -->|JDBC| I["PostgreSQL — Supabase"]
+
+    subgraph DB["sevak schema — 23 Tables"]
+        I --> J["users · customers · admins"]
+        I --> K["bookings · payments · reviews"]
+        I --> L["services · categories · variants"]
+        I --> M["locations · areas · cities"]
+    end
+
+    subgraph DBFeatures["DB Features"]
+        N["Triggers"]
+        O["Stored Procedures"]
+        P["Indexes"]
+    end
 ```
 
 ---
