@@ -154,7 +154,7 @@ AFTER (BCNF compliant):
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/your-username/sevak-api.git
+git clone https://github.com/madhavthesiya/sevak-api.git
 cd sevak-api
 
 # 2. Configure environment

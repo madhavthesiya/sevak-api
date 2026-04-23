@@ -22,6 +22,6 @@ public class OpenApiConfig {
                         .version("1.0.0")
                         .contact(new Contact()
                                 .name("Madhav")
-                                .url("https://github.com/madhav")));
+                                .url("https://github.com/madhavthesiya")));
     }
 }
