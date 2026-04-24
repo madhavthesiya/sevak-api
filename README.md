@@ -306,6 +306,35 @@ CALL sp_cancel_booking(booking_id, 'Customer changed mind');
 
 ---
 
+## 📡 Sample Response
+
+`GET` [`/api/admin/leaderboard`](https://sevak.madhavv.me/api/admin/leaderboard) — uses `RANK()` Window Function:
+
+```json
+[
+  {
+    "rank": 1,
+    "provider_id": 1,
+    "email": "ravi.electrician@gmail.com",
+    "city_name": "Ahmedabad",
+    "avg_rating": 5.00,
+    "jobs_completed": 1,
+    "total_revenue": 180.00
+  },
+  {
+    "rank": 3,
+    "provider_id": 5,
+    "email": "karan.carpenter@gmail.com",
+    "city_name": "Delhi",
+    "avg_rating": 4.80,
+    "jobs_completed": 0,
+    "total_revenue": 0
+  }
+]
+```
+
+---
+
 ## 📄 License
 
 This project is licensed under the MIT License.
