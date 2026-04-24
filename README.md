@@ -29,6 +29,7 @@ This project focuses on **database engineering excellence** — featuring a rigo
 - ⚡ **Stored Procedures** for transactional operations (booking cancellation/confirmation)
 - 🔄 **Database Triggers** for automatic rating recalculation on review insert
 - 📖 **Interactive Swagger UI** for live API exploration
+- 🌐 **Live deployment** at [`sevak.madhavv.me`](https://sevak.madhavv.me/swagger-ui.html)
 
 ---
 
@@ -142,6 +143,11 @@ AFTER (BCNF compliant):
 |:-------|:---------|:-------------|
 | `POST` | `/api/bookings/{id}/cancel` | **Stored Procedure** (sp_cancel_booking) |
 | `POST` | `/api/bookings/{id}/confirm` | **Stored Procedure** (sp_confirm_booking) |
+
+### 6. Health Check
+| Method | Endpoint | Description |
+|:-------|:---------|:------------|
+| `GET` | `/health` | Returns API status, DB connectivity, and version |
 
 ---
 
