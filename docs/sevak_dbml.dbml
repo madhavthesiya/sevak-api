@@ -1,0 +1,232 @@
+// SEVAK — Service Marketplace Database
+// 23-Table BCNF-Normalized Schema
+
+// ── AUTH DOMAIN ──────────────────────────────
+
+Table users {
+  user_id int [pk, increment]
+  email varchar(255) [not null, unique]
+  password varchar(255) [not null]
+  role varchar(20) [not null, note: 'customer | provider | admin']
+  status varchar(20) [not null, default: 'active']
+  created_at timestamp [not null]
+}
+
+Table customers {
+  customer_id int [pk, increment]
+  user_id int [not null, unique, ref: > users.user_id]
+  name varchar(100) [not null]
+  phone varchar(20)
+}
+
+Table admins {
+  admin_id int [pk, increment]
+  user_id int [not null, unique, ref: > users.user_id]
+  admin_role varchar(50) [not null]
+  permissions text
+  department varchar(100)
+}
+
+// ── LOCATION DOMAIN ─────────────────────────
+
+Table cities {
+  city_id int [pk, increment]
+  city_name varchar(100) [not null]
+  state varchar(100) [not null]
+}
+
+Table areas {
+  area_id int [pk, increment]
+  city_id int [not null, ref: > cities.city_id]
+  area_name varchar(100) [not null]
+  pincode varchar(10) [not null]
+}
+
+Table locations {
+  location_id int [pk, increment]
+  area_id int [not null, ref: > areas.area_id]
+  street varchar(255) [not null]
+  landmark varchar(255)
+  latitude decimal(10,7)
+  longitude decimal(10,7)
+
+  Note: 'BCNF: {lat, lng} → {area, street, landmark}'
+}
+
+Table customer_addresses {
+  customer_id int [not null, ref: > customers.customer_id]
+  location_id int [not null, ref: > locations.location_id]
+  label varchar(50)
+
+  indexes {
+    (customer_id, location_id) [pk]
+  }
+
+  Note: 'BCNF junction table'
+}
+
+// ── PROVIDER DOMAIN ─────────────────────────
+
+Table service_providers {
+  provider_id int [pk, increment]
+  user_id int [not null, unique, ref: > users.user_id]
+  city_id int [not null, ref: > cities.city_id]
+  bio text
+  experience_years int
+  avg_rating decimal(3,2)
+  verification_status varchar(20) [not null, default: 'pending']
+  custom_price decimal(10,2)
+  is_active boolean [not null, default: true]
+}
+
+Table provider_documents {
+  document_id int [pk, increment]
+  provider_id int [not null, ref: > service_providers.provider_id]
+  document_type varchar(100) [not null]
+  file_url varchar(500) [not null]
+  uploaded_at timestamp [not null]
+  description text
+}
+
+Table provider_availability {
+  provider_id int [not null, ref: > service_providers.provider_id]
+  day_of_week varchar(10) [not null]
+  start_time time [not null]
+  end_time time [not null]
+
+  indexes {
+    (provider_id, day_of_week) [pk]
+  }
+}
+
+// ── SERVICE DOMAIN ──────────────────────────
+
+Table categories {
+  category_id int [pk, increment]
+  category_name varchar(100) [not null, unique]
+  description text
+}
+
+Table services {
+  service_id int [pk, increment]
+  category_id int [not null, ref: > categories.category_id]
+  service_name varchar(150) [not null]
+  base_price decimal(10,2) [not null]
+  description text
+}
+
+Table service_variants {
+  variant_id int [pk, increment]
+  service_id int [not null, ref: > services.service_id]
+  variant_name varchar(100) [not null]
+  price decimal(10,2) [not null]
+  duration int [note: 'minutes']
+}
+
+Table provider_services {
+  provider_id int [not null, ref: > service_providers.provider_id]
+  service_id int [not null, ref: > services.service_id]
+
+  indexes {
+    (provider_id, service_id) [pk]
+  }
+}
+
+// ── BOOKING DOMAIN ──────────────────────────
+
+Table coupons {
+  coupon_id int [pk, increment]
+  code varchar(30) [not null, unique]
+  discount_type varchar(20) [not null, note: 'percentage | flat']
+  discount_value decimal(10,2) [not null]
+  min_order decimal(10,2)
+  usage_limit int
+  valid_from date [not null]
+  valid_to date [not null]
+}
+
+Table bookings {
+  booking_id int [pk, increment]
+  customer_id int [not null, ref: > customers.customer_id]
+  provider_id int [not null, ref: > service_providers.provider_id]
+  location_id int [not null, ref: > locations.location_id]
+  coupon_id int [ref: > coupons.coupon_id]
+  scheduled_date date [not null]
+  scheduled_time time [not null]
+  status varchar(30) [not null, default: 'pending']
+  total_amount decimal(10,2) [not null]
+  special_instructions text
+}
+
+Table booking_items {
+  booking_id int [not null, ref: > bookings.booking_id]
+  item_no int [not null]
+  service_id int [not null, ref: > services.service_id]
+  variant_id int [ref: > service_variants.variant_id]
+  quantity int [not null, default: 1]
+  unit_price decimal(10,2) [not null]
+
+  indexes {
+    (booking_id, item_no) [pk]
+  }
+}
+
+Table booking_status_log {
+  booking_id int [not null, ref: > bookings.booking_id]
+  log_time timestamp [not null]
+  status varchar(30) [not null]
+  remarks text
+
+  indexes {
+    (booking_id, log_time) [pk]
+  }
+}
+
+// ── PAYMENT DOMAIN ──────────────────────────
+
+Table payments {
+  payment_id int [pk, increment]
+  booking_id int [not null, unique, ref: - bookings.booking_id]
+  payment_method varchar(50) [not null]
+  status varchar(20) [not null, default: 'pending']
+  amount decimal(10,2) [not null]
+  gateway_ref varchar(255)
+  paid_at timestamp
+
+  Note: '1:1 with bookings'
+}
+
+Table cancellations {
+  cancel_id int [pk, increment]
+  booking_id int [not null, unique, ref: - bookings.booking_id]
+  reason text [not null]
+  refund_status varchar(20) [not null, default: 'pending']
+
+  Note: '1:1 with bookings'
+}
+
+// ── REVIEW DOMAIN ───────────────────────────
+
+Table provider_reviews {
+  review_id int [pk, increment]
+  booking_id int [not null, unique, ref: - bookings.booking_id]
+  rating int [not null, note: '1-5']
+  comment text
+
+  Note: 'Trigger: auto-updates avg_rating'
+}
+
+Table service_reviews {
+  review_id int [pk, increment]
+  service_id int [not null, ref: > services.service_id]
+  booking_id int [not null, ref: > bookings.booking_id]
+  rating int [not null, note: '1-5']
+  comment text
+}
+
+Table complaints {
+  complaint_id int [pk, increment]
+  booking_id int [not null, ref: > bookings.booking_id]
+  subject varchar(255) [not null]
+  status varchar(30) [not null, default: 'open']
+}

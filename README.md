@@ -101,6 +101,10 @@ AFTER (BCNF compliant):
 
 📄 Full mathematical proof: [`SEVAK_Normalization_Proof.md`](docs/SEVAK_Normalization_Proof.md)
 
+📊 Entity-Relationship Diagram: [`FINAL_SCHEMA.pdf`](docs/FINAL_SCHEMA.pdf)
+
+📝 Top 15 SQL Queries: [`sevak_queries.sql`](sql/sevak_queries.sql)
+
 ---
 
 ## 🔌 API Endpoints
