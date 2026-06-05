@@ -16,18 +16,21 @@ public class GeneralRepository {
     }
 
     // ── Browse All Services by Category ──────────────────────
-    public List<Map<String, Object>> getAllServices() {
+    public List<Map<String, Object>> getAllServices(int page, int limit) {
+        int offset = (page - 1) * limit;
         return jdbc.queryForList("""
                 SELECT cat.category_name, s.service_id, s.service_name,
                        s.base_price, s.description
                 FROM services s
                 JOIN categories cat ON s.category_id = cat.category_id
                 ORDER BY cat.category_name, s.base_price
-                """);
+                LIMIT ? OFFSET ?
+                """, limit, offset);
     }
 
     // ── Search Providers by Service Keyword ──────────────────
-    public List<Map<String, Object>> searchProviders(String keyword) {
+    public List<Map<String, Object>> searchProviders(String keyword, int page, int limit) {
+        int offset = (page - 1) * limit;
         return jdbc.queryForList("""
                 SELECT sp.provider_id, u.email AS provider_email, ci.city_name,
                        s.service_name, s.base_price, sp.avg_rating, sp.experience_years
@@ -38,11 +41,12 @@ public class GeneralRepository {
                 JOIN cities ci ON sp.city_id = ci.city_id
                 WHERE s.service_name ILIKE ? AND sp.is_active = TRUE
                 ORDER BY sp.avg_rating DESC NULLS LAST
-                """, "%" + keyword + "%");
+                LIMIT ? OFFSET ?
+                """, "%" + keyword + "%", limit, offset);
     }
 
     // ── Top 5 Highest-Rated Providers ────────────────────────
-    public List<Map<String, Object>> getTopProviders() {
+    public List<Map<String, Object>> getTopProviders(int top) {
         return jdbc.queryForList("""
                 SELECT sp.provider_id, u.email, ci.city_name,
                        sp.avg_rating, sp.experience_years
@@ -51,12 +55,13 @@ public class GeneralRepository {
                 JOIN cities ci ON sp.city_id = ci.city_id
                 WHERE sp.is_active = TRUE AND sp.verification_status = 'verified'
                 ORDER BY sp.avg_rating DESC NULLS LAST
-                LIMIT 5
-                """);
+                LIMIT ?
+                """, top);
     }
 
     // ── Providers Available on a Given Day ───────────────────
-    public List<Map<String, Object>> getAvailableProviders(String day) {
+    public List<Map<String, Object>> getAvailableProviders(String day, int page, int limit) {
+        int offset = (page - 1) * limit;
         return jdbc.queryForList("""
                 SELECT sp.provider_id, u.email, pa.day_of_week,
                        pa.start_time, pa.end_time
@@ -65,6 +70,7 @@ public class GeneralRepository {
                 JOIN users u ON sp.user_id = u.user_id
                 WHERE pa.day_of_week = ? AND sp.is_active = TRUE
                 ORDER BY pa.start_time
-                """, day);
+                LIMIT ? OFFSET ?
+                """, day, limit, offset);
     }
 }

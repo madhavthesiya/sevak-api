@@ -16,7 +16,8 @@ public class ProviderRepository {
     }
 
     // ── Pending Jobs with Location ──────────────────────────
-    public List<Map<String, Object>> getPendingJobs(int providerId) {
+    public List<Map<String, Object>> getPendingJobs(int providerId, int page, int limit) {
+        int offset = (page - 1) * limit;
         return jdbc.queryForList("""
                 SELECT b.booking_id, cu.name AS customer, b.scheduled_date,
                        b.scheduled_time, b.total_amount, loc.street, ar.area_name
@@ -26,11 +27,13 @@ public class ProviderRepository {
                 JOIN areas ar ON loc.area_id = ar.area_id
                 WHERE b.provider_id = ? AND b.status = 'pending'
                 ORDER BY b.scheduled_date, b.scheduled_time
-                """, providerId);
+                LIMIT ? OFFSET ?
+                """, providerId, limit, offset);
     }
 
     // ── Completed Jobs ──────────────────────────────────────
-    public List<Map<String, Object>> getCompletedJobs(int providerId) {
+    public List<Map<String, Object>> getCompletedJobs(int providerId, int page, int limit) {
+        int offset = (page - 1) * limit;
         return jdbc.queryForList("""
                 SELECT b.booking_id, cu.name AS customer, b.scheduled_date,
                        b.total_amount, p.status AS payment_status
@@ -39,7 +42,8 @@ public class ProviderRepository {
                 LEFT JOIN payments p ON b.booking_id = p.booking_id
                 WHERE b.provider_id = ? AND b.status = 'completed'
                 ORDER BY b.scheduled_date DESC
-                """, providerId);
+                LIMIT ? OFFSET ?
+                """, providerId, limit, offset);
     }
 
     // ── Earnings by Payment Method (CASE, SUM, GROUP BY) ────
@@ -57,7 +61,8 @@ public class ProviderRepository {
     }
 
     // ── Reviews & Ratings ───────────────────────────────────
-    public List<Map<String, Object>> getReviews(int providerId) {
+    public List<Map<String, Object>> getReviews(int providerId, int page, int limit) {
+        int offset = (page - 1) * limit;
         return jdbc.queryForList("""
                 SELECT pr.rating, pr.comment, cu.name AS customer,
                        b.scheduled_date
@@ -66,7 +71,8 @@ public class ProviderRepository {
                 JOIN customers cu ON b.customer_id = cu.customer_id
                 WHERE b.provider_id = ?
                 ORDER BY b.scheduled_date DESC
-                """, providerId);
+                LIMIT ? OFFSET ?
+                """, providerId, limit, offset);
     }
 
     // ── Rating vs City Average (Derived Table / Subquery) ───

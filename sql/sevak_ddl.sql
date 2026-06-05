@@ -305,6 +305,53 @@ CREATE INDEX idx_complaints_status   ON complaints(status);
 -- ============================================================
 
 
+-- ============================================================
+--  MATERIALIZED VIEWS
+-- ============================================================
+
+-- 1. Provider Leaderboard — pre-computes RANK() window function
+CREATE MATERIALIZED VIEW mv_provider_leaderboard AS
+SELECT
+    RANK() OVER (ORDER BY sp.avg_rating DESC NULLS LAST,
+                 COUNT(b.booking_id) DESC)       AS rank,
+    sp.provider_id,
+    u.email,
+    ci.city_name,
+    sp.avg_rating,
+    COUNT(b.booking_id)                          AS jobs_completed,
+    COALESCE(SUM(b.total_amount), 0)             AS total_revenue
+FROM service_providers sp
+JOIN users u    ON sp.user_id     = u.user_id
+JOIN cities ci  ON sp.city_id     = ci.city_id
+LEFT JOIN bookings b ON sp.provider_id = b.provider_id
+                    AND b.status = 'completed'
+WHERE sp.is_active = TRUE
+GROUP BY sp.provider_id, u.email, ci.city_name, sp.avg_rating
+ORDER BY rank;
+
+CREATE UNIQUE INDEX idx_mv_leaderboard_provider
+    ON mv_provider_leaderboard(provider_id);
+
+-- 2. City Revenue Summary — pre-computes 5-table revenue analytics
+CREATE MATERIALIZED VIEW mv_city_revenue_summary AS
+SELECT
+    ci.city_name,
+    COUNT(DISTINCT b.booking_id)                 AS total_bookings,
+    COUNT(DISTINCT b.customer_id)                AS unique_customers,
+    COALESCE(SUM(p.amount), 0)                   AS total_revenue,
+    ROUND(COALESCE(AVG(p.amount), 0), 2)         AS avg_booking_value
+FROM cities ci
+JOIN areas ar       ON ci.city_id       = ar.city_id
+JOIN locations loc  ON ar.area_id       = loc.area_id
+JOIN bookings b     ON loc.location_id  = b.location_id
+LEFT JOIN payments p ON b.booking_id    = p.booking_id
+                    AND p.status = 'success'
+GROUP BY ci.city_name
+ORDER BY total_revenue DESC;
+
+CREATE UNIQUE INDEX idx_mv_city_revenue
+    ON mv_city_revenue_summary(city_name);
+
 
 -- ============================================================
 --  SEVAK – Stored Procedures & Triggers
@@ -316,16 +363,20 @@ SET search_path = sevak;
 -- ============================================================
 --  TRIGGER 1: Auto-Update Provider avg_rating
 -- ============================================================
--- PURPOSE: Every time a new review is inserted into
---          provider_reviews, this trigger automatically
---          recalculates the provider's average rating
---          from ALL their reviews and updates the
+-- PURPOSE: Every time a review is inserted, updated, or
+--          deleted in provider_reviews, this trigger
+--          automatically recalculates the provider's average
+--          rating from ALL their reviews and updates the
 --          avg_rating column in service_providers.
 --
 -- WHY THIS IS IMPORTANT:
 --   Without this trigger, avg_rating would be stale
 --   and require manual recalculation. This ensures
 --   real-time data consistency at the database layer.
+--
+-- V2 CHANGE: Extended from INSERT-only to full lifecycle
+--   (INSERT/UPDATE/DELETE) so edited or removed reviews
+--   also trigger recalculation.
 -- ============================================================
 
 -- Step 1: Create the trigger function
@@ -335,12 +386,20 @@ DECLARE
     v_provider_id INT;
     v_new_avg     NUMERIC(3,2);
 BEGIN
-    -- Get the provider_id from the booking that was reviewed
-    SELECT b.provider_id INTO v_provider_id
-    FROM bookings b
-    WHERE b.booking_id = NEW.booking_id;
+    -- Get provider_id from the affected booking.
+    -- Use NEW for INSERT/UPDATE, OLD for DELETE (NEW is NULL on DELETE).
+    IF TG_OP = 'DELETE' THEN
+        SELECT b.provider_id INTO v_provider_id
+        FROM bookings b
+        WHERE b.booking_id = OLD.booking_id;
+    ELSE
+        SELECT b.provider_id INTO v_provider_id
+        FROM bookings b
+        WHERE b.booking_id = NEW.booking_id;
+    END IF;
 
-    -- Recalculate average rating from ALL reviews for this provider
+    -- Recalculate average rating from ALL remaining reviews
+    -- Returns NULL if no reviews remain (correctly nullifies avg_rating)
     SELECT ROUND(AVG(pr.rating), 2) INTO v_new_avg
     FROM provider_reviews pr
     JOIN bookings b ON pr.booking_id = b.booking_id
@@ -351,17 +410,23 @@ BEGIN
     SET avg_rating = v_new_avg
     WHERE provider_id = v_provider_id;
 
-    RAISE NOTICE 'Provider % avg_rating updated to %', v_provider_id, v_new_avg;
+    RAISE NOTICE 'Provider % avg_rating updated to % (trigger: %)',
+        v_provider_id, v_new_avg, TG_OP;
 
+    -- Must return OLD for DELETE, NEW for INSERT/UPDATE
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 -- Step 2: Attach the trigger to the provider_reviews table
-CREATE TRIGGER trg_after_review_insert
-AFTER INSERT ON provider_reviews
+CREATE TRIGGER trg_after_review_change
+AFTER INSERT OR UPDATE OR DELETE ON provider_reviews
 FOR EACH ROW
 EXECUTE FUNCTION fn_update_provider_avg_rating();
+
 
 
 -- ============================================================

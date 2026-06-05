@@ -25,9 +25,10 @@ This project focuses on **database engineering excellence** — featuring a rigo
 ### Highlights
 
 - 🏗️ **23-table BCNF-normalized schema** with mathematical proof of compliance
-- 📊 **19 REST endpoints** showcasing advanced SQL (Window Functions, Derived Tables, STRING_AGG)
+- 📊 **21 REST endpoints** with pagination, showcasing advanced SQL (Window Functions, Derived Tables, STRING_AGG)
 - ⚡ **Stored Procedures** for transactional operations (booking cancellation/confirmation)
-- 🔄 **Database Triggers** for automatic rating recalculation on review insert
+- 🔄 **Database Triggers** for automatic rating recalculation on review INSERT/UPDATE/DELETE
+- 📦 **Materialized Views** for O(1) pre-computed analytics (leaderboard, city revenue)
 - 📖 **Interactive Swagger UI** for live API exploration
 - 🌐 **Live deployment** at [`sevak.madhavv.me`](https://sevak.madhavv.me/swagger-ui.html)
 
@@ -105,42 +106,46 @@ AFTER (BCNF compliant):
 
 📝 Top 15 SQL Queries: [`sevak_queries.sql`](sql/sevak_queries.sql)
 
+⚡ Query Optimization Report: [`QUERY_OPTIMIZATION.md`](docs/QUERY_OPTIMIZATION.md)
+
 ---
 
 ## 🔌 API Endpoints
 
-### 1. General — Browse & Search
+### 1. General — Browse & Search (Paginated)
 | Method | Endpoint | SQL Technique |
 |:-------|:---------|:-------------|
-| `GET` | `/api/general/services` | JOIN, ORDER BY |
-| `GET` | `/api/general/services/search?q={keyword}` | 5-table JOIN, ILIKE |
-| `GET` | `/api/general/providers/top` | JOIN, LIMIT, NULLS LAST |
-| `GET` | `/api/general/providers/available?day={day}` | Parameterized JOIN |
+| `GET` | `/api/general/services?page=1&limit=10` | JOIN, ORDER BY, LIMIT/OFFSET |
+| `GET` | `/api/general/services/search?q={keyword}&page=1&limit=10` | 5-table JOIN, ILIKE, LIMIT/OFFSET |
+| `GET` | `/api/general/providers/top?top=5` | JOIN, configurable LIMIT, NULLS LAST |
+| `GET` | `/api/general/providers/available?day={day}&page=1&limit=10` | Parameterized JOIN, LIMIT/OFFSET |
 
-### 2. Customer — Bookings & Addresses
+### 2. Customer — Bookings & Addresses (Paginated)
 | Method | Endpoint | SQL Technique |
 |:-------|:---------|:-------------|
-| `GET` | `/api/customers/{id}/bookings` | 3-table JOIN |
+| `GET` | `/api/customers/{id}/bookings?page=1&limit=10` | 3-table JOIN, LIMIT/OFFSET |
 | `GET` | `/api/customers/{id}/bookings/{bid}/items` | LEFT JOIN, computed columns |
-| `GET` | `/api/customers/{id}/payments` | JOIN, NULLS LAST |
+| `GET` | `/api/customers/{id}/payments?page=1&limit=10` | JOIN, NULLS LAST, LIMIT/OFFSET |
 | `GET` | `/api/customers/{id}/spending` | CASE, SUM, COUNT, GROUP BY |
 | `GET` | `/api/customers/{id}/addresses` | **4-table JOIN** (BCNF path) |
 
-### 3. Provider — Jobs & Analytics
+### 3. Provider — Jobs & Analytics (Paginated)
 | Method | Endpoint | SQL Technique |
 |:-------|:---------|:-------------|
-| `GET` | `/api/providers/{id}/pending` | 3-table JOIN via locations |
-| `GET` | `/api/providers/{id}/completed` | LEFT JOIN |
+| `GET` | `/api/providers/{id}/pending?page=1&limit=10` | 3-table JOIN via locations, LIMIT/OFFSET |
+| `GET` | `/api/providers/{id}/completed?page=1&limit=10` | LEFT JOIN, LIMIT/OFFSET |
 | `GET` | `/api/providers/{id}/earnings` | SUM, COUNT, GROUP BY |
-| `GET` | `/api/providers/{id}/reviews` | 3-table JOIN via bookings |
+| `GET` | `/api/providers/{id}/reviews?page=1&limit=10` | 3-table JOIN via bookings, LIMIT/OFFSET |
 | `GET` | `/api/providers/{id}/rating` | **Derived Table (Subquery in FROM)** |
 
 ### 4. Admin — Analytics Dashboard
 | Method | Endpoint | SQL Technique |
 |:-------|:---------|:-------------|
 | `GET` | `/api/admin/revenue` | 5-table JOIN, SUM, GROUP BY |
-| `GET` | `/api/admin/leaderboard` | **RANK() Window Function** |
+| `GET` | `/api/admin/leaderboard?fast=true` | **RANK() Window Function** / **Materialized View** |
 | `GET` | `/api/admin/complaints` | **STRING_AGG**, 5-table JOIN |
+| `GET` | `/api/admin/city-revenue` | **Materialized View** (pre-computed 5-table JOIN) |
+| `POST` | `/api/admin/refresh-views` | Refreshes both Materialized Views |
 
 ### 5. Booking Actions — Stored Procedures
 | Method | Endpoint | SQL Technique |

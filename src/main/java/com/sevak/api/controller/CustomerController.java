@@ -22,10 +22,12 @@ public class CustomerController {
     }
 
     @GetMapping("/{id}/bookings")
-    @Operation(summary = "My bookings", description = "All bookings for a customer ordered by date descending")
+    @Operation(summary = "My bookings", description = "All bookings for a customer ordered by date descending. Supports pagination.")
     public ResponseEntity<List<Map<String, Object>>> getBookings(
-            @Parameter(description = "Customer ID") @PathVariable int id) {
-        return ResponseEntity.ok(repo.getBookings(id));
+            @Parameter(description = "Customer ID") @PathVariable int id,
+            @Parameter(description = "Page number (1-indexed)") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "Results per page") @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(repo.getBookings(id, page, limit));
     }
 
     @GetMapping("/{customerId}/bookings/{bookingId}/items")
@@ -37,10 +39,12 @@ public class CustomerController {
     }
 
     @GetMapping("/{id}/payments")
-    @Operation(summary = "Payment history", description = "All payments for a customer's bookings")
+    @Operation(summary = "Payment history", description = "All payments for a customer's bookings. Supports pagination.")
     public ResponseEntity<List<Map<String, Object>>> getPayments(
-            @Parameter(description = "Customer ID") @PathVariable int id) {
-        return ResponseEntity.ok(repo.getPayments(id));
+            @Parameter(description = "Customer ID") @PathVariable int id,
+            @Parameter(description = "Page number (1-indexed)") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "Results per page") @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(repo.getPayments(id, page, limit));
     }
 
     @GetMapping("/{id}/spending")

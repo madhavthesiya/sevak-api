@@ -22,33 +22,40 @@ public class GeneralController {
     }
 
     @GetMapping("/services")
-    @Operation(summary = "Browse all services", description = "List all services grouped by category with base prices")
-    public ResponseEntity<List<Map<String, Object>>> getAllServices() {
-        return ResponseEntity.ok(repo.getAllServices());
+    @Operation(summary = "Browse all services", description = "List all services grouped by category with base prices. Supports pagination.")
+    public ResponseEntity<List<Map<String, Object>>> getAllServices(
+            @Parameter(description = "Page number (1-indexed)") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "Results per page") @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(repo.getAllServices(page, limit));
     }
 
     @GetMapping("/services/search")
     @Operation(summary = "Search providers by service",
-            description = "Find active providers offering a service matching the keyword. Uses 5-table JOIN with ILIKE.")
+            description = "Find active providers offering a service matching the keyword. Uses 5-table JOIN with ILIKE. Supports pagination.")
     public ResponseEntity<List<Map<String, Object>>> searchProviders(
             @Parameter(description = "Service name keyword (e.g. cleaning, fan, painting)")
-            @RequestParam String q) {
-        return ResponseEntity.ok(repo.searchProviders(q));
+            @RequestParam String q,
+            @Parameter(description = "Page number (1-indexed)") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "Results per page") @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(repo.searchProviders(q, page, limit));
     }
 
     @GetMapping("/providers/top")
-    @Operation(summary = "Top 5 rated providers",
-            description = "Returns the top 5 highest-rated verified providers across all cities")
-    public ResponseEntity<List<Map<String, Object>>> getTopProviders() {
-        return ResponseEntity.ok(repo.getTopProviders());
+    @Operation(summary = "Top rated providers",
+            description = "Returns the highest-rated verified providers across all cities. Defaults to top 5.")
+    public ResponseEntity<List<Map<String, Object>>> getTopProviders(
+            @Parameter(description = "Number of top providers to return") @RequestParam(defaultValue = "5") int top) {
+        return ResponseEntity.ok(repo.getTopProviders(top));
     }
 
     @GetMapping("/providers/available")
     @Operation(summary = "Providers available on a day",
-            description = "List all active providers available on the specified day with their time slots")
+            description = "List all active providers available on the specified day with their time slots. Supports pagination.")
     public ResponseEntity<List<Map<String, Object>>> getAvailableProviders(
             @Parameter(description = "Day of week (e.g. Monday, Tuesday)")
-            @RequestParam String day) {
-        return ResponseEntity.ok(repo.getAvailableProviders(day));
+            @RequestParam String day,
+            @Parameter(description = "Page number (1-indexed)") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "Results per page") @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(repo.getAvailableProviders(day, page, limit));
     }
 }

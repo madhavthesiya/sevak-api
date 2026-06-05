@@ -70,4 +70,32 @@ public class AdminRepository {
                 ORDER BY count DESC
                 """);
     }
+
+    // ── Leaderboard from Materialized View (O(1) read) ────
+    public List<Map<String, Object>> getLeaderboardFast() {
+        return jdbc.queryForList("SELECT * FROM mv_provider_leaderboard ORDER BY rank");
+    }
+
+    // ── City Revenue from Materialized View ───────────────
+    public List<Map<String, Object>> getCityRevenue() {
+        return jdbc.queryForList("SELECT * FROM mv_city_revenue_summary ORDER BY total_revenue DESC");
+    }
+
+    // ── Refresh Materialized Views ────────────────────────
+    public Map<String, Object> refreshViews() {
+        try {
+            jdbc.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_provider_leaderboard");
+            jdbc.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_city_revenue_summary");
+            return Map.of(
+                    "success", true,
+                    "message", "Materialized views refreshed successfully",
+                    "timestamp", java.time.Instant.now().toString()
+            );
+        } catch (Exception e) {
+            return Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            );
+        }
+    }
 }

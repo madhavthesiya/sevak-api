@@ -16,7 +16,8 @@ public class CustomerRepository {
     }
 
     // ── My Bookings ──────────────────────────────────────────
-    public List<Map<String, Object>> getBookings(int customerId) {
+    public List<Map<String, Object>> getBookings(int customerId, int page, int limit) {
+        int offset = (page - 1) * limit;
         return jdbc.queryForList("""
                 SELECT b.booking_id, u.email AS provider_email, b.scheduled_date,
                        b.scheduled_time, b.status, b.total_amount
@@ -25,7 +26,8 @@ public class CustomerRepository {
                 JOIN users u ON sp.user_id = u.user_id
                 WHERE b.customer_id = ?
                 ORDER BY b.scheduled_date DESC
-                """, customerId);
+                LIMIT ? OFFSET ?
+                """, customerId, limit, offset);
     }
 
     // ── Booking Items (Itemized) ─────────────────────────────
@@ -43,7 +45,8 @@ public class CustomerRepository {
     }
 
     // ── Payment History ──────────────────────────────────────
-    public List<Map<String, Object>> getPayments(int customerId) {
+    public List<Map<String, Object>> getPayments(int customerId, int page, int limit) {
+        int offset = (page - 1) * limit;
         return jdbc.queryForList("""
                 SELECT b.booking_id, p.payment_method, p.status, p.amount,
                        p.gateway_ref, p.paid_at
@@ -51,7 +54,8 @@ public class CustomerRepository {
                 JOIN bookings b ON p.booking_id = b.booking_id
                 WHERE b.customer_id = ?
                 ORDER BY p.paid_at DESC NULLS LAST
-                """, customerId);
+                LIMIT ? OFFSET ?
+                """, customerId, limit, offset);
     }
 
     // ── Spending Summary (CASE, SUM, COUNT, GROUP BY) ────────
