@@ -340,17 +340,10 @@ CALL sp_cancel_booking(booking_id, 'Customer changed mind');
   }
 ]
 ```
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
 ---
 
 <div align="center">
 
-**Made by [Madhav Thesiya](https://www.linkedin.com/in/madhavthesiya/)** — If this was useful, drop a ⭐
+**Made by [Madhav Thesiya](https://www.linkedin.com/in/madhavthesiya/)** � If this was useful, drop a ?
 
 </div>
