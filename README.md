@@ -344,6 +344,10 @@ CALL sp_cancel_booking(booking_id, 'Customer changed mind');
 
 <div align="center">
 
-**Made by [Madhav Thesiya](https://www.linkedin.com/in/madhavthesiya/)** � If this was useful, drop a ?
+**© 2024 Madhav Thesiya. All Rights Reserved.**
+
+---
+
+**Made by [Madhav Thesiya](https://www.linkedin.com/in/madhavthesiya/)** — If this was useful, drop a ⭐
 
 </div>
