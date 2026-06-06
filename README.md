@@ -344,7 +344,7 @@ CALL sp_cancel_booking(booking_id, 'Customer changed mind');
 
 <div align="center">
 
-**© 2024 Madhav Thesiya. All Rights Reserved.**
+**© 2026 Madhav Thesiya. All Rights Reserved.**
 
 ---
 
