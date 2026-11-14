@@ -1,0 +1,50 @@
+{
+  "measuredOn" : {
+    "postgres" : "PostgreSQL 16.13 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+    "shared_buffers" : "256MB",
+    "work_mem" : "4MB",
+    "effective_cache_size" : "4GB",
+    "max_parallel_workers_per_gather" : "2",
+    "random_page_cost" : "4",
+    "dockerCpus" : 18,
+    "dockerMemoryGb" : 8.0,
+    "os" : "Windows 11",
+    "loadSeconds" : 417,
+    "databaseSize" : "1593 MB",
+    "rows" : {
+      "users" : 55015,
+      "customers" : 50007,
+      "service_providers" : 5006,
+      "locations" : 60010,
+      "customer_addresses" : 60015,
+      "bookings" : 1000010,
+      "booking_items" : 2000015,
+      "booking_status_log" : 3522573,
+      "payments" : 817085,
+      "provider_reviews" : 441461,
+      "complaints" : 8659
+    }
+  },
+  "timings" : {
+    "services.list" : 0.066,
+    "providers.search" : 2.651,
+    "providers.top" : 12.764,
+    "providers.profile" : 1.157,
+    "providers.reviews" : 2.148,
+    "providers.slots" : 3.542,
+    "bookings.price" : 0.056,
+    "me.bookings" : 0.58,
+    "me.booking" : 0.307,
+    "me.addresses" : 0.126,
+    "provider.jobs" : 0.504,
+    "provider.earnings" : 1.064,
+    "provider.earningsMonthly" : 1.058,
+    "provider.services" : 0.068,
+    "admin.revenue" : 0.017,
+    "admin.cityRevenue" : 0.016,
+    "admin.leaderboard" : 448.381,
+    "admin.leaderboard.fast" : 14.768,
+    "admin.complaints" : 153.892,
+    "admin.verification" : 1.5
+  }
+}

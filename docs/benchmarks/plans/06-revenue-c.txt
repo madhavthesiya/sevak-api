@@ -1,0 +1,75 @@
+Phase 6: divide by the trigger-guaranteed subtotal (correct)
+
+Sort  (cost=313347.19..313347.21 rows=6 width=50) (actual time=8411.457..8411.589 rows=6 loops=1)
+  Sort Key: (round(sum(((p.amount * (sum(((bi.quantity)::numeric * bi.unit_price)))) / NULLIF(b.subtotal, '0'::numeric))), 2)) DESC, c.category_name
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=11312919 read=12565, temp read=23624 written=23637
+  ->  Finalize GroupAggregate  (cost=312942.86..313347.12 rows=6 width=50) (actual time=8237.485..8411.550 rows=6 loops=1)
+        Group Key: c.category_name
+        Buffers: shared hit=11312919 read=12565, temp read=23624 written=23637
+        ->  Gather Merge  (cost=312942.86..313346.91 rows=12 width=50) (actual time=8183.439..8411.438 rows=18 loops=1)
+              Workers Planned: 2
+              Workers Launched: 2
+              Buffers: shared hit=11312919 read=12565, temp read=23624 written=23637
+              ->  Partial GroupAggregate  (cost=311942.83..312345.50 rows=6 width=50) (actual time=7993.925..8126.735 rows=6 loops=3)
+                    Group Key: c.category_name
+                    Buffers: shared hit=11312919 read=12565, temp read=23624 written=23637
+                    ->  Sort  (cost=311942.83..312000.35 rows=23005 width=52) (actual time=7966.108..8011.943 rows=250458 loops=3)
+                          Sort Key: c.category_name
+                          Sort Method: external merge  Disk: 14768kB
+                          Buffers: shared hit=11312919 read=12565, temp read=23624 written=23637
+                          Worker 0:  Sort Method: external merge  Disk: 7912kB
+                          Worker 1:  Sort Method: external merge  Disk: 3376kB
+                          ->  Hash Join  (cost=290426.89..310276.16 rows=23005 width=52) (actual time=7379.154..7841.643 rows=250458 loops=3)
+                                Hash Cond: (b.booking_id = p.booking_id)
+                                Buffers: shared hit=11312901 read=12565, temp read=20367 written=20367
+                                ->  Parallel Seq Scan on bookings b  (cost=0.00..18056.71 rows=416671 width=9) (actual time=29.140..96.276 rows=333337 loops=3)
+                                      Buffers: shared hit=1325 read=12565
+                                ->  Hash  (cost=289736.74..289736.74 rows=55212 width=55) (actual time=7349.420..7349.428 rows=751374 loops=3)
+                                      Buckets: 131072 (originally 65536)  Batches: 8 (originally 1)  Memory Usage: 7169kB
+                                      Buffers: shared hit=11311576, temp written=13068
+                                      ->  Nested Loop  (cost=2.30..289736.74 rows=55212 width=55) (actual time=0.473..6864.377 rows=751374 loops=3)
+                                            Buffers: shared hit=11311576
+                                            ->  Hash Join  (cost=1.87..261102.95 rows=60000 width=46) (actual time=0.446..3921.162 rows=1000010 loops=3)
+                                                  Hash Cond: (s.category_id = c.category_id)
+                                                  Buffers: shared hit=57362
+                                                  ->  GroupAggregate  (cost=0.74..235740.37 rows=2000015 width=40) (actual time=0.398..3658.102 rows=1000010 loops=3)
+                                                        Group Key: bi.booking_id, s.category_id
+                                                        Buffers: shared hit=57359
+                                                        ->  Incremental Sort  (cost=0.74..185740.00 rows=2000015 width=17) (actual time=0.385..2051.655 rows=2000015 loops=3)
+                                                              Sort Key: bi.booking_id, s.category_id
+                                                              Presorted Key: bi.booking_id
+                                                              Full-sort Groups: 60607  Sort Method: quicksort  Average Memory: 26kB  Peak Memory: 26kB
+                                                              Buffers: shared hit=57359
+                                                              Worker 0:  Full-sort Groups: 60607  Sort Method: quicksort  Average Memory: 26kB  Peak Memory: 26kB
+                                                              Worker 1:  Full-sort Groups: 60607  Sort Method: quicksort  Average Memory: 26kB  Peak Memory: 26kB
+                                                              ->  Nested Loop  (cost=0.57..131296.85 rows=2000015 width=17) (actual time=0.083..1453.363 rows=2000015 loops=3)
+                                                                    Buffers: shared hit=57295
+                                                                    ->  Index Scan using booking_items_pkey on booking_items bi  (cost=0.43..83410.22 rows=2000015 width=17) (actual time=0.036..361.674 rows=2000015 loops=3)
+                                                                          Buffers: shared hit=57221
+                                                                    ->  Memoize  (cost=0.15..0.16 rows=1 width=8) (actual time=0.000..0.000 rows=1 loops=6000045)
+                                                                          Cache Key: bi.service_id
+                                                                          Cache Mode: logical
+                                                                          Hits: 2000003  Misses: 12  Evictions: 0  Overflows: 0  Memory Usage: 2kB
+                                                                          Buffers: shared hit=74
+                                                                          Worker 0:  Hits: 2000003  Misses: 12  Evictions: 0  Overflows: 0  Memory Usage: 2kB
+                                                                          Worker 1:  Hits: 2000003  Misses: 12  Evictions: 0  Overflows: 0  Memory Usage: 2kB
+                                                                          ->  Index Scan using services_pkey on services s  (cost=0.14..0.15 rows=1 width=8) (actual time=0.002..0.002 rows=1 loops=36)
+                                                                                Index Cond: (service_id = bi.service_id)
+                                                                                Buffers: shared hit=74
+                                                  ->  Hash  (cost=1.06..1.06 rows=6 width=14) (actual time=0.029..0.030 rows=6 loops=3)
+                                                        Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                                                        Buffers: shared hit=3
+                                                        ->  Seq Scan on categories c  (cost=0.00..1.06 rows=6 width=14) (actual time=0.019..0.021 rows=6 loops=3)
+                                                              Buffers: shared hit=3
+                                            ->  Index Scan using uq_one_successful_payment on payments p  (cost=0.42..0.47 rows=1 width=9) (actual time=0.002..0.002 rows=1 loops=3000030)
+                                                  Index Cond: (booking_id = bi.booking_id)
+                                                  Buffers: shared hit=11254214
+Planning:
+  Buffers: shared hit=21
+Planning Time: 1.088 ms
+JIT:
+  Functions: 129
+  Options: Inlining false, Optimization false, Expressions true, Deforming true
+  Timing: Generation 8.442 ms, Inlining 0.000 ms, Optimization 6.306 ms, Emission 81.486 ms, Total 96.234 ms
+Execution Time: 8417.826 ms

@@ -1,0 +1,59 @@
+Before task 0.4 (counts payments twice)
+
+GroupAggregate  (cost=165092.59..351508.50 rows=6 width=50) (actual time=1978.351..2609.483 rows=6 loops=1)
+  Group Key: cat.category_name
+  Buffers: shared hit=20086 read=17265, temp read=21141 written=21286
+  ->  Gather Merge  (cost=165092.59..340230.23 rows=1503760 width=19) (actual time=1843.634..2362.777 rows=1495794 loops=1)
+        Workers Planned: 2
+        Workers Launched: 2
+        Buffers: shared hit=20086 read=17265, temp read=21141 written=21286
+        ->  Sort  (cost=164092.57..165658.99 rows=626567 width=19) (actual time=1813.544..1959.851 rows=498598 loops=3)
+              Sort Key: cat.category_name, b.booking_id
+              Sort Method: external merge  Disk: 15528kB
+              Buffers: shared hit=20086 read=17265, temp read=21141 written=21286
+              Worker 0:  Sort Method: external merge  Disk: 15688kB
+              Worker 1:  Sort Method: external merge  Disk: 15752kB
+              ->  Hash Join  (cost=49804.57..90911.22 rows=626567 width=19) (actual time=640.501..1096.037 rows=498598 loops=3)
+                    Hash Cond: (s.category_id = cat.category_id)
+                    Buffers: shared hit=19994 read=17265, temp read=15270 written=15388
+                    ->  Hash Join  (cost=49803.44..88103.59 rows=626567 width=13) (actual time=615.203..973.545 rows=498598 loops=3)
+                          Hash Cond: (bi.service_id = s.service_id)
+                          Buffers: shared hit=19931 read=17265, temp read=15270 written=15388
+                          ->  Parallel Hash Join  (cost=49802.17..85876.70 rows=626567 width=13) (actual time=615.111..871.508 rows=498598 loops=3)
+                                Hash Cond: (bi.booking_id = p.booking_id)
+                                Buffers: shared hit=19928 read=17265, temp read=15270 written=15388
+                                ->  Parallel Seq Scan on booking_items bi  (cost=0.00..21939.40 rows=833340 width=8) (actual time=0.109..71.083 rows=666672 loops=3)
+                                      Buffers: shared hit=9729 read=3877
+                                ->  Parallel Hash  (cost=44356.12..44356.12 rows=313284 width=13) (actual time=407.804..407.810 rows=250458 loops=3)
+                                      Buckets: 262144  Batches: 8  Memory Usage: 6496kB
+                                      Buffers: shared hit=10199 read=13388, temp read=5524 written=8500
+                                      ->  Parallel Hash Join  (cost=24893.10..44356.12 rows=313284 width=13) (actual time=201.394..320.839 rows=250458 loops=3)
+                                            Hash Cond: (p.booking_id = b.booking_id)
+                                            Buffers: shared hit=10199 read=13388, temp read=5524 written=5588
+                                            ->  Parallel Seq Scan on payments p  (cost=0.00..13952.65 rows=313284 width=9) (actual time=1.624..45.205 rows=250458 loops=3)
+                                                  Filter: ((status)::text = 'success'::text)
+                                                  Rows Removed by Filter: 21904
+                                                  Buffers: shared hit=7292 read=2405
+                                            ->  Parallel Hash  (cost=18056.71..18056.71 rows=416671 width=4) (actual time=96.505..96.507 rows=333337 loops=3)
+                                                  Buckets: 262144  Batches: 8  Memory Usage: 7008kB
+                                                  Buffers: shared hit=2907 read=10983, temp written=2604
+                                                  ->  Parallel Seq Scan on bookings b  (cost=0.00..18056.71 rows=416671 width=4) (actual time=0.052..40.906 rows=333337 loops=3)
+                                                        Buffers: shared hit=2907 read=10983
+                          ->  Hash  (cost=1.12..1.12 rows=12 width=8) (actual time=0.051..0.052 rows=12 loops=3)
+                                Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                                Buffers: shared hit=3
+                                ->  Seq Scan on services s  (cost=0.00..1.12 rows=12 width=8) (actual time=0.039..0.041 rows=12 loops=3)
+                                      Buffers: shared hit=3
+                    ->  Hash  (cost=1.06..1.06 rows=6 width=14) (actual time=25.113..25.113 rows=6 loops=3)
+                          Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                          Buffers: shared hit=3
+                          ->  Seq Scan on categories cat  (cost=0.00..1.06 rows=6 width=14) (actual time=25.080..25.087 rows=6 loops=3)
+                                Buffers: shared hit=3
+Planning:
+  Buffers: shared hit=58
+Planning Time: 1.724 ms
+JIT:
+  Functions: 111
+  Options: Inlining false, Optimization false, Expressions true, Deforming true
+  Timing: Generation 8.445 ms, Inlining 0.000 ms, Optimization 3.075 ms, Emission 72.982 ms, Total 84.501 ms
+Execution Time: 2614.537 ms

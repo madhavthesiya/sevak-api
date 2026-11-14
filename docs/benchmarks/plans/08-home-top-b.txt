@@ -1,0 +1,32 @@
+New: read from the stored leaderboard
+
+Limit  (cost=2375.08..2375.09 rows=4 width=42) (actual time=7.870..7.873 rows=4 loops=1)
+  Buffers: shared hit=1363
+  ->  Sort  (cost=2375.08..2386.93 rows=4741 width=42) (actual time=7.869..7.871 rows=4 loops=1)
+        Sort Key: lb.weighted_rating DESC NULLS LAST, lb.provider_id
+        Sort Method: top-N heapsort  Memory: 25kB
+        Buffers: shared hit=1363
+        ->  Hash Join  (cost=420.76..2303.96 rows=4741 width=42) (actual time=1.522..7.232 rows=4805 loops=1)
+              Hash Cond: (sp.provider_id = lb.provider_id)
+              Buffers: shared hit=1363
+              ->  Hash Join  (cost=235.64..2106.21 rows=4805 width=20) (actual time=0.856..6.066 rows=4805 loops=1)
+                    Hash Cond: (u.user_id = sp.user_id)
+                    Buffers: shared hit=1289
+                    ->  Seq Scan on users u  (cost=0.00..1726.15 rows=55015 width=16) (actual time=0.001..2.202 rows=55015 loops=1)
+                          Buffers: shared hit=1176
+                    ->  Hash  (cost=175.57..175.57 rows=4805 width=12) (actual time=0.829..0.830 rows=4805 loops=1)
+                          Buckets: 8192  Batches: 1  Memory Usage: 271kB
+                          Buffers: shared hit=113
+                          ->  Seq Scan on service_providers sp  (cost=0.00..175.57 rows=4805 width=12) (actual time=0.003..0.459 rows=4805 loops=1)
+                                Filter: ((verification_status)::text = 'verified'::text)
+                                Rows Removed by Filter: 201
+                                Buffers: shared hit=113
+              ->  Hash  (cost=123.39..123.39 rows=4939 width=26) (actual time=0.643..0.643 rows=4939 loops=1)
+                    Buckets: 8192  Batches: 1  Memory Usage: 328kB
+                    Buffers: shared hit=74
+                    ->  Seq Scan on mv_provider_leaderboard lb  (cost=0.00..123.39 rows=4939 width=26) (actual time=0.003..0.271 rows=4939 loops=1)
+                          Buffers: shared hit=74
+Planning:
+  Buffers: shared hit=24
+Planning Time: 0.305 ms
+Execution Time: 7.968 ms

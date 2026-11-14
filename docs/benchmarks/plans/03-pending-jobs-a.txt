@@ -1,0 +1,71 @@
+Neither provider index
+
+Limit  (cost=281.47..362.23 rows=7 width=134) (actual time=0.319..0.370 rows=10 loops=1)
+  Buffers: shared hit=464
+  ->  Result  (cost=281.47..362.23 rows=7 width=134) (actual time=0.319..0.368 rows=10 loops=1)
+        Buffers: shared hit=464
+        ->  Sort  (cost=281.47..281.49 rows=7 width=102) (actual time=0.291..0.292 rows=10 loops=1)
+              Sort Key: b.scheduled_start, b.booking_id
+              Sort Method: top-N heapsort  Memory: 26kB
+              Buffers: shared hit=423
+              ->  Nested Loop Left Join  (cost=13.94..281.37 rows=7 width=102) (actual time=0.060..0.281 rows=28 loops=1)
+                    Buffers: shared hit=423
+                    ->  Nested Loop  (cost=5.48..222.00 rows=7 width=79) (actual time=0.049..0.212 rows=28 loops=1)
+                          Buffers: shared hit=339
+                          ->  Nested Loop  (cost=5.34..220.86 rows=7 width=66) (actual time=0.043..0.184 rows=28 loops=1)
+                                Buffers: shared hit=283
+                                ->  Nested Loop  (cost=5.05..162.71 rows=7 width=50) (actual time=0.036..0.142 rows=28 loops=1)
+                                      Buffers: shared hit=199
+                                      ->  Nested Loop  (cost=4.76..159.82 rows=7 width=42) (actual time=0.027..0.087 rows=28 loops=1)
+                                            Buffers: shared hit=115
+                                            ->  Bitmap Heap Scan on bookings b  (cost=4.47..101.66 rows=7 width=42) (actual time=0.017..0.039 rows=28 loops=1)
+                                                  Recheck Cond: ((provider_id = 7) AND ((status)::text = ANY ('{pending,confirmed,in_progress}'::text[])))
+                                                  Filter: ((status)::text = 'pending'::text)
+                                                  Heap Blocks: exact=28
+                                                  Buffers: shared hit=31
+                                                  ->  Bitmap Index Scan on ex_provider_no_double_booking  (cost=0.00..4.47 rows=25 width=0) (actual time=0.010..0.010 rows=28 loops=1)
+                                                        Index Cond: (provider_id = 7)
+                                                        Buffers: shared hit=3
+                                            ->  Index Scan using customers_pkey on customers cu  (cost=0.29..8.31 rows=1 width=8) (actual time=0.001..0.001 rows=1 loops=28)
+                                                  Index Cond: (customer_id = b.customer_id)
+                                                  Buffers: shared hit=84
+                                      ->  Index Scan using users_pkey on users cu_u  (cost=0.29..0.41 rows=1 width=16) (actual time=0.002..0.002 rows=1 loops=28)
+                                            Index Cond: (user_id = cu.user_id)
+                                            Buffers: shared hit=84
+                                ->  Index Scan using locations_pkey on locations loc  (cost=0.29..8.31 rows=1 width=24) (actual time=0.001..0.001 rows=1 loops=28)
+                                      Index Cond: (location_id = b.location_id)
+                                      Buffers: shared hit=84
+                          ->  Index Scan using areas_pkey on areas ar  (cost=0.14..0.16 rows=1 width=21) (actual time=0.001..0.001 rows=1 loops=28)
+                                Index Cond: (area_id = loc.area_id)
+                                Buffers: shared hit=56
+                    ->  Limit  (cost=8.45..8.46 rows=1 width=19) (actual time=0.002..0.002 rows=0 loops=28)
+                          Buffers: shared hit=84
+                          ->  Sort  (cost=8.45..8.46 rows=1 width=19) (actual time=0.002..0.002 rows=0 loops=28)
+                                Sort Key: payments.created_at DESC, payments.payment_id DESC
+                                Sort Method: quicksort  Memory: 25kB
+                                Buffers: shared hit=84
+                                ->  Index Scan using idx_payments_booking on payments  (cost=0.42..8.44 rows=1 width=19) (actual time=0.001..0.001 rows=0 loops=28)
+                                      Index Cond: (booking_id = b.booking_id)
+                                      Buffers: shared hit=84
+        SubPlan 1
+          ->  Aggregate  (cost=11.51..11.52 rows=1 width=32) (actual time=0.007..0.007 rows=1 loops=10)
+                Buffers: shared hit=41
+                ->  Sort  (cost=11.50..11.50 rows=2 width=24) (actual time=0.006..0.006 rows=2 loops=10)
+                      Sort Key: bi.item_no
+                      Sort Method: quicksort  Memory: 25kB
+                      Buffers: shared hit=41
+                      ->  Hash Join  (cost=1.70..11.49 rows=2 width=24) (actual time=0.005..0.005 rows=2 loops=10)
+                            Hash Cond: (bi.service_id = s.service_id)
+                            Buffers: shared hit=41
+                            ->  Index Scan using booking_items_pkey on booking_items bi  (cost=0.43..10.21 rows=2 width=8) (actual time=0.004..0.004 rows=2 loops=10)
+                                  Index Cond: (booking_id = b.booking_id)
+                                  Buffers: shared hit=40
+                            ->  Hash  (cost=1.12..1.12 rows=12 width=24) (actual time=0.006..0.006 rows=12 loops=1)
+                                  Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                                  Buffers: shared hit=1
+                                  ->  Seq Scan on services s  (cost=0.00..1.12 rows=12 width=24) (actual time=0.003..0.004 rows=12 loops=1)
+                                        Buffers: shared hit=1
+Planning:
+  Buffers: shared hit=50
+Planning Time: 1.024 ms
+Execution Time: 0.508 ms

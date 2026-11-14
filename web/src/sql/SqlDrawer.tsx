@@ -77,7 +77,9 @@ function QueryPanel({ queryKey }: { queryKey: string }) {
       </pre>
       <p className="text-sm text-bottle-soft">
         <span className="font-semibold text-white">Benchmark: </span>
-        {q.measuredMs != null ? `${q.measuredMs} ms on the test dataset` : "not measured yet"}
+        {q.measuredMs != null
+          ? `${q.measuredMs} ms, the median of 3 runs on a test database with 1 million bookings`
+          : "not measured, because this statement changes data"}
       </p>
 
       {role === "admin" && q.explainable && (

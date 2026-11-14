@@ -1,0 +1,50 @@
+OFFSET, page 1, with index
+
+Limit  (cost=1.62..5.87 rows=20 width=50) (actual time=0.109..0.391 rows=20 loops=1)
+  Buffers: shared hit=245
+  ->  Nested Loop  (cost=1.62..212696.97 rows=1000010 width=50) (actual time=0.107..0.386 rows=20 loops=1)
+        Buffers: shared hit=245
+        ->  Nested Loop  (cost=1.32..180840.38 rows=1000010 width=42) (actual time=0.090..0.303 rows=20 loops=1)
+              Buffers: shared hit=185
+              ->  Nested Loop  (cost=1.02..154401.63 rows=1000010 width=42) (actual time=0.073..0.248 rows=20 loops=1)
+                    Buffers: shared hit=125
+                    ->  Nested Loop  (cost=0.72..108708.22 rows=1000010 width=34) (actual time=0.054..0.153 rows=20 loops=1)
+                          Buffers: shared hit=65
+                          ->  Index Scan using idx_bookings_start_id on bookings b  (cost=0.42..70406.41 rows=1000010 width=34) (actual time=0.029..0.037 rows=20 loops=1)
+                                Buffers: shared hit=5
+                          ->  Memoize  (cost=0.30..0.32 rows=1 width=8) (actual time=0.005..0.005 rows=1 loops=20)
+                                Cache Key: b.customer_id
+                                Cache Mode: logical
+                                Hits: 0  Misses: 20  Evictions: 0  Overflows: 0  Memory Usage: 3kB
+                                Buffers: shared hit=60
+                                ->  Index Scan using customers_pkey on customers cu  (cost=0.29..0.31 rows=1 width=8) (actual time=0.004..0.004 rows=1 loops=20)
+                                      Index Cond: (customer_id = b.customer_id)
+                                      Buffers: shared hit=60
+                    ->  Memoize  (cost=0.30..0.42 rows=1 width=16) (actual time=0.004..0.004 rows=1 loops=20)
+                          Cache Key: cu.user_id
+                          Cache Mode: logical
+                          Hits: 0  Misses: 20  Evictions: 0  Overflows: 0  Memory Usage: 3kB
+                          Buffers: shared hit=60
+                          ->  Index Scan using users_pkey on users cu_u  (cost=0.29..0.41 rows=1 width=16) (actual time=0.004..0.004 rows=1 loops=20)
+                                Index Cond: (user_id = cu.user_id)
+                                Buffers: shared hit=60
+              ->  Memoize  (cost=0.29..0.31 rows=1 width=8) (actual time=0.002..0.002 rows=1 loops=20)
+                    Cache Key: b.provider_id
+                    Cache Mode: logical
+                    Hits: 0  Misses: 20  Evictions: 0  Overflows: 0  Memory Usage: 3kB
+                    Buffers: shared hit=60
+                    ->  Index Scan using service_providers_pkey on service_providers sp  (cost=0.28..0.30 rows=1 width=8) (actual time=0.002..0.002 rows=1 loops=20)
+                          Index Cond: (provider_id = b.provider_id)
+                          Buffers: shared hit=60
+        ->  Memoize  (cost=0.30..1.38 rows=1 width=16) (actual time=0.004..0.004 rows=1 loops=20)
+              Cache Key: sp.user_id
+              Cache Mode: logical
+              Hits: 0  Misses: 20  Evictions: 0  Overflows: 0  Memory Usage: 3kB
+              Buffers: shared hit=60
+              ->  Index Scan using users_pkey on users pr_u  (cost=0.29..1.37 rows=1 width=16) (actual time=0.003..0.003 rows=1 loops=20)
+                    Index Cond: (user_id = sp.user_id)
+                    Buffers: shared hit=60
+Planning:
+  Buffers: shared hit=48
+Planning Time: 1.539 ms
+Execution Time: 3.199 ms

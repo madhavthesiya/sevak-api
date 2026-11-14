@@ -1,0 +1,52 @@
+OFFSET, page 1, no index
+
+Limit  (cost=39998.51..40000.84 rows=20 width=50) (actual time=644.251..653.485 rows=20 loops=1)
+  Buffers: shared hit=5687 read=12039
+  ->  Gather Merge  (cost=39998.51..137228.53 rows=833342 width=50) (actual time=644.248..653.478 rows=20 loops=1)
+        Workers Planned: 2
+        Workers Launched: 2
+        Buffers: shared hit=5687 read=12039
+        ->  Sort  (cost=38998.49..40040.17 rows=416671 width=50) (actual time=619.561..619.569 rows=18 loops=3)
+              Sort Key: b.scheduled_start DESC, b.booking_id DESC
+              Sort Method: top-N heapsort  Memory: 29kB
+              Buffers: shared hit=5687 read=12039
+              Worker 0:  Sort Method: top-N heapsort  Memory: 29kB
+              Worker 1:  Sort Method: top-N heapsort  Memory: 29kB
+              ->  Parallel Hash Join  (cost=5478.08..27911.02 rows=416671 width=50) (actual time=32.819..497.826 rows=333337 loops=3)
+                    Hash Cond: (sp.user_id = pr_u.user_id)
+                    Buffers: shared hit=5595 read=12039
+                    ->  Hash Join  (cost=3573.94..24913.03 rows=416671 width=42) (actual time=25.023..410.019 rows=333337 loops=3)
+                          Hash Cond: (b.provider_id = sp.provider_id)
+                          Buffers: shared hit=4323 read=12039
+                          ->  Parallel Hash Join  (cost=3348.30..23592.71 rows=416671 width=42) (actual time=23.596..328.799 rows=333337 loops=3)
+                                Hash Cond: (cu.user_id = cu_u.user_id)
+                                Buffers: shared hit=3984 read=12039
+                                ->  Hash Join  (cost=1444.16..20594.72 rows=416671 width=34) (actual time=15.154..208.009 rows=333337 loops=3)
+                                      Hash Cond: (b.customer_id = cu.customer_id)
+                                      Buffers: shared hit=2808 read=12039
+                                      ->  Parallel Seq Scan on bookings b  (cost=0.00..18056.71 rows=416671 width=34) (actual time=0.040..68.439 rows=333337 loops=3)
+                                            Buffers: shared hit=1851 read=12039
+                                      ->  Hash  (cost=819.07..819.07 rows=50007 width=8) (actual time=14.725..14.726 rows=50007 loops=3)
+                                            Buckets: 65536  Batches: 1  Memory Usage: 2466kB
+                                            Buffers: shared hit=957
+                                            ->  Seq Scan on customers cu  (cost=0.00..819.07 rows=50007 width=8) (actual time=0.019..5.496 rows=50007 loops=3)
+                                                  Buffers: shared hit=957
+                                ->  Parallel Hash  (cost=1499.62..1499.62 rows=32362 width=16) (actual time=8.239..8.240 rows=18338 loops=3)
+                                      Buckets: 65536  Batches: 1  Memory Usage: 3296kB
+                                      Buffers: shared hit=1176
+                                      ->  Parallel Seq Scan on users cu_u  (cost=0.00..1499.62 rows=32362 width=16) (actual time=0.008..2.803 rows=18338 loops=3)
+                                            Buffers: shared hit=1176
+                          ->  Hash  (cost=163.06..163.06 rows=5006 width=8) (actual time=1.329..1.330 rows=5006 loops=3)
+                                Buckets: 8192  Batches: 1  Memory Usage: 260kB
+                                Buffers: shared hit=339
+                                ->  Seq Scan on service_providers sp  (cost=0.00..163.06 rows=5006 width=8) (actual time=0.019..0.582 rows=5006 loops=3)
+                                      Buffers: shared hit=339
+                    ->  Parallel Hash  (cost=1499.62..1499.62 rows=32362 width=16) (actual time=7.259..7.260 rows=18338 loops=3)
+                          Buckets: 65536  Batches: 1  Memory Usage: 3296kB
+                          Buffers: shared hit=1176
+                          ->  Parallel Seq Scan on users pr_u  (cost=0.00..1499.62 rows=32362 width=16) (actual time=0.008..7.247 rows=55015 loops=1)
+                                Buffers: shared hit=1176
+Planning:
+  Buffers: shared hit=48
+Planning Time: 1.875 ms
+Execution Time: 654.234 ms

@@ -1,0 +1,40 @@
+Without the exclusion constraint's GiST index
+
+Sort  (cost=8400.10..8424.95 rows=9940 width=12) (actual time=3.693..3.703 rows=171 loops=1)
+  Sort Key: ((start_at.start_at AT TIME ZONE 'Asia/Kolkata'::text))
+  Sort Method: quicksort  Memory: 31kB
+  Buffers: shared hit=46
+  ->  Nested Loop Anti Join  (cost=39.05..7740.13 rows=9940 width=12) (actual time=0.148..3.674 rows=171 loops=1)
+        Join Filter: (tstzrange(b.scheduled_start, b.scheduled_end, '[)'::text) && tstzrange((start_at.start_at AT TIME ZONE 'Asia/Kolkata'::text), ((start_at.start_at AT TIME ZONE 'Asia/Kolkata'::text) + '01:00:00'::interval), '[)'::text))
+        Rows Removed by Join Filter: 4851
+        Buffers: shared hit=46
+        ->  Nested Loop  (cost=25.53..743.23 rows=9990 width=16) (actual time=0.069..0.187 rows=209 loops=1)
+              Buffers: shared hit=9
+              ->  Hash Join  (cost=25.52..43.32 rows=30 width=24) (actual time=0.051..0.066 rows=12 loops=1)
+                    Hash Cond: (EXTRACT(isodow FROM (d.d)::date) = (pa.day_of_week)::numeric)
+                    Buffers: shared hit=9
+                    ->  Function Scan on generate_series d  (cost=0.01..10.01 rows=1000 width=8) (actual time=0.013..0.014 rows=14 loops=1)
+                    ->  Hash  (cost=25.43..25.43 rows=6 width=18) (actual time=0.027..0.028 rows=6 loops=1)
+                          Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                          Buffers: shared hit=9
+                          ->  Bitmap Heap Scan on provider_availability pa  (cost=4.32..25.43 rows=6 width=18) (actual time=0.018..0.025 rows=6 loops=1)
+                                Recheck Cond: (provider_id = 7)
+                                Heap Blocks: exact=6
+                                Buffers: shared hit=9
+                                ->  Bitmap Index Scan on ex_availability_no_overlap  (cost=0.00..4.32 rows=6 width=0) (actual time=0.013..0.014 rows=6 loops=1)
+                                      Index Cond: (provider_id = 7)
+                                      Buffers: shared hit=3
+              ->  Function Scan on generate_series start_at  (cost=0.02..20.02 rows=333 width=8) (actual time=0.003..0.008 rows=17 loops=12)
+                    Filter: ((start_at AT TIME ZONE 'Asia/Kolkata'::text) > (now() + '02:00:00'::interval))
+                    Rows Removed by Filter: 2
+        ->  Materialize  (cost=13.52..110.87 rows=25 width=16) (actual time=0.000..0.001 rows=23 loops=209)
+              Buffers: shared hit=37
+              ->  Bitmap Heap Scan on bookings b  (cost=13.52..110.75 rows=25 width=16) (actual time=0.020..0.049 rows=28 loops=1)
+                    Recheck Cond: ((provider_id = 7) AND ((status)::text = ANY ('{pending,confirmed,in_progress}'::text[])))
+                    Heap Blocks: exact=28
+                    Buffers: shared hit=37
+                    ->  Bitmap Index Scan on idx_bookings_provider_status  (cost=0.00..13.52 rows=25 width=0) (actual time=0.014..0.015 rows=28 loops=1)
+                          Index Cond: ((provider_id = 7) AND ((status)::text = ANY ('{pending,confirmed,in_progress}'::text[])))
+                          Buffers: shared hit=9
+Planning Time: 0.275 ms
+Execution Time: 3.800 ms
