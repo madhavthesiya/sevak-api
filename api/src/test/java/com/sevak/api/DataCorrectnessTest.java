@@ -27,7 +27,7 @@ class DataCorrectnessTest extends IntegrationTest {
     private AdminRepository admin;
 
     private BigDecimal totalCategoryRevenue() {
-        return admin.findRevenueByCategory().stream()
+        return admin.computeRevenueByCategory().stream()
                 .map(CategoryRevenue::totalRevenue)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
@@ -37,7 +37,7 @@ class DataCorrectnessTest extends IntegrationTest {
     }
 
     private BigDecimal revenueOf(String category) {
-        return admin.findRevenueByCategory().stream()
+        return admin.computeRevenueByCategory().stream()
                 .filter(row -> category.equals(row.categoryName()))
                 .map(CategoryRevenue::totalRevenue)
                 .findFirst()
@@ -72,13 +72,22 @@ class DataCorrectnessTest extends IntegrationTest {
 
     @Test
     void paymentForAMultiCategoryBookingIsSplitBetweenCategories() {
-        // Booking 9 is one ₹5000 Painting item; add a Cleaning item of the same value.
+        // Booking 9 is one ₹5000 Painting item, paid ₹5000; add a Cleaning item of the same value.
         jdbc.update("INSERT INTO booking_items (booking_id, item_no, service_id, quantity, unit_price)"
                 + " VALUES (9, 2, 4, 1, 5000.00)");
+        jdbc.update("UPDATE bookings SET subtotal = subtotal + 5000, total_amount = total_amount + 5000"
+                + " WHERE booking_id = 9");
+        // Run the deferred subtotal check now, to prove this is a state the database would commit.
+        jdbc.execute("SET CONSTRAINTS ALL IMMEDIATE");
 
         assertThat(revenueOf("Painting")).isEqualByComparingTo("2500.00");
         assertThat(revenueOf("Cleaning")).isEqualByComparingTo("6525.00");
         assertThat(totalCategoryRevenue()).isEqualByComparingTo(totalSuccessfulPayments());
+    }
+
+    @Test
+    void storedCategoryRevenueMatchesTheLiveCalculation() {
+        assertThat(admin.findRevenueByCategory()).isNotEmpty().isEqualTo(admin.computeRevenueByCategory());
     }
 
     @Test

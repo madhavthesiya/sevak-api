@@ -86,7 +86,8 @@ class ApiErrorsTest extends IntegrationTest {
 
     @Test
     void unexpectedDatabaseErrorReturnsGeneric500() throws Exception {
-        jdbc.execute("ALTER TABLE categories RENAME TO categories_renamed"); // rolled back after the test
+        // The revenue chart reads this stored summary; renaming it breaks the query. Rolled back after the test.
+        jdbc.execute("ALTER MATERIALIZED VIEW mv_category_revenue RENAME TO mv_category_revenue_renamed");
 
         mvc.perform(get("/api/v1/admin/revenue").header(AUTH, admin()))
                 .andExpect(status().isInternalServerError())
