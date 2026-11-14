@@ -34,7 +34,8 @@ This project focuses on **database engineering excellence** — featuring a rigo
 - 🚦 **Booking status rules stored as data** and enforced by a trigger, with a full audit log
 - ⚡ **Stored Procedures** for transactional operations (booking cancellation/confirmation)
 - 🔄 **Database Triggers** for automatic rating recalculation on review INSERT/UPDATE/DELETE
-- 📦 **Materialized Views** for pre-computed analytics (leaderboard, city revenue)
+- 📦 **Materialized Views** for pre-computed analytics (leaderboard, revenue by city and by category), refreshed in the background
+- ⚡ **Measured on 1 million bookings** ([benchmarks](docs/BENCHMARKS.md)): home page 2,334 ms → 8 ms, admin bookings page 514 ms → 2.4 ms, live leaderboard 3,041 ms → 452 ms, with every rewrite checked to return identical rows
 - 📖 **Interactive Swagger UI** for live API exploration
 - 🌐 **Live deployment** at [`sevak.madhavv.me`](https://sevak.madhavv.me/swagger-ui.html)
 
@@ -112,7 +113,7 @@ AFTER (BCNF compliant):
 
 📝 Top 15 SQL Queries: [`sevak_queries.sql`](api/sql/sevak_queries.sql)
 
-⚡ Query Optimization Report: [`QUERY_OPTIMIZATION.md`](docs/QUERY_OPTIMIZATION.md)
+⚡ Benchmarks on 1 million bookings: [`BENCHMARKS.md`](docs/BENCHMARKS.md)
 
 ---
 
@@ -129,8 +130,8 @@ All endpoints are under `/api/v1`. Lists return `{ data, page, limit, total, tot
 ### 2. Providers
 | Method | Endpoint | SQL Technique |
 |:-------|:---------|:--------------|
-| `GET` | `/providers?service=&city=&day=&page=&limit=` | Multi-table JOIN, `ILIKE` with a trigram index, `EXISTS` |
-| `GET` | `/providers/top?limit=` | Bayesian weighted rating |
+| `GET` | `/providers?service=&city=&day=&page=&limit=` | Multi-table JOIN, `ILIKE`, `EXISTS`, ranked by the stored leaderboard score |
+| `GET` | `/providers/top?limit=` | Bayesian weighted rating, read from a **materialized view** |
 | `GET` | `/providers/{id}` | **Derived table** (rating vs city average) |
 | `GET` | `/providers/{id}/reviews` | Paginated JOIN |
 | `GET` | `/providers/{id}/slots?from=&days=&minutes=` | `generate_series`, `LATERAL`, range overlap |
@@ -162,7 +163,7 @@ All endpoints are under `/api/v1`. Lists return `{ data, page, limit, total, tot
 ### 5. Admin
 | Method | Endpoint | SQL Technique |
 |:-------|:---------|:--------------|
-| `GET` | `/admin/revenue` | CTE and **window function** splitting each payment across categories |
+| `GET` | `/admin/revenue` | **Materialized view** of a CTE whose **window function** splits each payment across categories |
 | `GET` | `/admin/leaderboard?fast=true` | **RANK()** view, or its **materialized view** |
 | `GET` | `/admin/complaints` | `STRING_AGG` |
 | `GET` | `/admin/complaints/board` | Every complaint, open ones first |
@@ -287,6 +288,11 @@ npm test                # unit tests (Vitest)
 npx playwright test     # end-to-end tests; needs the API running
 ```
 
+```bash
+# Benchmarks on about 1 million bookings (needs Docker, about 15 minutes). Results: docs/BENCHMARKS.md
+cd api && ./mvnw test -Dtest=QueryBenchmark -Dsurefire.failIfNoSpecifiedTests=false
+```
+
 The end-to-end tests drive a real browser against the real API: a customer books, the provider accepts, a coupon reprices the bill, overlapping hours are refused, and a full booking works at phone width. CI also fails if the generated API types no longer match the backend.
 
 The login token is kept in `localStorage` so a refresh or new tab stays signed in. Any script on the page could read it, so the app renders no user-supplied HTML and loads no third-party scripts. Address coordinates are placeholders, because the app has no maps service.
@@ -310,6 +316,7 @@ The login token is kept in `localStorage` so a refresh or new tab stays signed i
 | Frontend data | TanStack Query, openapi-fetch, openapi-typescript | Server state and generated API types |
 | Frontend UI | Tailwind CSS, shadcn/ui, Recharts | Components and charts |
 | Frontend tests | Vitest, Playwright | Unit and end-to-end tests |
+| Load testing | k6 | 50 virtual users against the API on 1M bookings |
 | Container | Docker + Docker Compose | Reproducible deployments |
 | API Hosting | DigitalOcean App Platform | Production API deployment |
 | DB Hosting | Supabase | Free-tier managed PostgreSQL |
@@ -332,7 +339,8 @@ sevak/
 │   │                    # Each feature: Controller → Service → Repository, with dto/ records
 │   ├── src/main/resources/db/  # Flyway: migration/ (schema, procedures, views), seed/ (demo data)
 │   ├── src/test/java/   # Integration tests on a real PostgreSQL
-│   └── sql/             # Top 15 showcase queries and data integrity checks
+│   ├── sql/             # Top 15 showcase queries, data integrity checks, the 1M-booking generator
+│   └── load-test/       # k6 load test
 ├── web/                 # React frontend
 │   ├── src/api/         # Generated types and one typed function per API call
 │   ├── src/pages/       # Screens for customers, providers and admins
@@ -354,22 +362,29 @@ This project intentionally uses **Spring JDBC** instead of JPA/Hibernate to demo
 ```sql
 -- v_provider_leaderboard: the live view; mv_provider_leaderboard is its materialized copy
 WITH platform AS (SELECT AVG(rating) AS avg_rating FROM provider_reviews),
+-- Jobs are counted per provider first. A booking has at most one successful payment, so COUNT(*)
+-- needs no DISTINCT; the earlier COUNT(DISTINCT) sorted on disk and took 3,041 ms at 1M bookings, this 452 ms.
+jobs AS (
+    SELECT b.provider_id, COUNT(*) AS jobs_completed, COALESCE(SUM(p.amount), 0) AS total_revenue
+    FROM bookings b
+    LEFT JOIN payments p ON p.booking_id = b.booking_id AND p.status = 'success'
+    WHERE b.status = 'completed'
+    GROUP BY b.provider_id
+),
 stats AS (
     SELECT sp.provider_id, u.email, ci.city_name, sp.avg_rating, sp.review_count,
            -- Bayesian average: one 5-star review can't beat fifty excellent ones
            CASE WHEN sp.review_count > 0 THEN
                ROUND((5 * pl.avg_rating + sp.avg_rating * sp.review_count) / (5 + sp.review_count), 2)
-           END                          AS weighted_rating,
-           COUNT(DISTINCT b.booking_id) AS jobs_completed,
-           COALESCE(SUM(p.amount), 0)   AS total_revenue
+           END                              AS weighted_rating,
+           COALESCE(j.jobs_completed, 0)    AS jobs_completed,
+           COALESCE(j.total_revenue, 0)     AS total_revenue
     FROM service_providers sp
     JOIN users u   ON sp.user_id = u.user_id
     JOIN cities ci ON sp.city_id = ci.city_id
     CROSS JOIN platform pl
-    LEFT JOIN bookings b ON sp.provider_id = b.provider_id AND b.status = 'completed'
-    LEFT JOIN payments p ON b.booking_id = p.booking_id AND p.status = 'success'
+    LEFT JOIN jobs j ON j.provider_id = sp.provider_id
     WHERE sp.is_active = TRUE
-    GROUP BY sp.provider_id, u.email, ci.city_name, sp.avg_rating, sp.review_count, pl.avg_rating
 )
 SELECT RANK() OVER (ORDER BY weighted_rating DESC NULLS LAST, jobs_completed DESC) AS rank, *
 FROM stats
