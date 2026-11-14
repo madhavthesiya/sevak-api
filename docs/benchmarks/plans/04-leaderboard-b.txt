@@ -1,0 +1,105 @@
+New live view, jobs counted first
+
+Sort  (cost=61067.31..61079.65 rows=4939 width=174) (actual time=438.749..450.431 rows=4939 loops=1)
+  Sort Key: (rank() OVER (?)), sp_1.provider_id
+  Sort Method: quicksort  Memory: 811kB
+  Buffers: shared hit=15097 read=15116, temp read=5187 written=5276
+  ->  Hash Join  (cost=58825.56..60764.30 rows=4939 width=174) (actual time=423.785..446.585 rows=4939 loops=1)
+        Hash Cond: (sp.provider_id = sp_1.provider_id)
+        Buffers: shared hit=15097 read=15116, temp read=5187 written=5276
+        ->  Hash Join  (cost=225.63..2096.21 rows=5006 width=16) (actual time=0.769..10.426 rows=5006 loops=1)
+              Hash Cond: (u.user_id = sp.user_id)
+              Buffers: shared hit=1289
+              ->  Seq Scan on users u  (cost=0.00..1726.15 rows=55015 width=16) (actual time=0.005..3.673 rows=55015 loops=1)
+                    Buffers: shared hit=1176
+              ->  Hash  (cost=163.06..163.06 rows=5006 width=8) (actual time=0.729..0.730 rows=5006 loops=1)
+                    Buckets: 8192  Batches: 1  Memory Usage: 260kB
+                    Buffers: shared hit=113
+                    ->  Seq Scan on service_providers sp  (cost=0.00..163.06 rows=5006 width=8) (actual time=0.004..0.352 rows=5006 loops=1)
+                          Buffers: shared hit=113
+        ->  Hash  (cost=58538.19..58538.19 rows=4939 width=162) (actual time=422.980..434.407 rows=4939 loops=1)
+              Buckets: 8192  Batches: 1  Memory Usage: 645kB
+              Buffers: shared hit=13808 read=15116, temp read=5187 written=5276
+              ->  WindowAgg  (cost=58229.50..58538.19 rows=4939 width=162) (actual time=416.583..432.482 rows=4939 loops=1)
+                    Buffers: shared hit=13808 read=15116, temp read=5187 written=5276
+                    ->  Sort  (cost=58229.50..58241.85 rows=4939 width=154) (actual time=416.566..428.380 rows=4939 loops=1)
+                          Sort Key: (CASE WHEN (sp_1.review_count > 0) THEN round(((('5'::numeric * (avg(provider_reviews.rating))) + (sp_1.avg_rating * (sp_1.review_count)::numeric)) / ((5 + sp_1.review_count))::numeric), 2) ELSE NULL::numeric END) DESC NULLS LAST, (COALESCE(j.jobs_completed, '0'::bigint)) DESC
+                          Sort Method: quicksort  Memory: 726kB
+                          Buffers: shared hit=13808 read=15116, temp read=5187 written=5276
+                          ->  Nested Loop  (cost=55858.46..57926.49 rows=4939 width=154) (actual time=396.423..425.479 rows=4939 loops=1)
+                                Buffers: shared hit=13808 read=15116, temp read=5187 written=5276
+                                ->  Finalize Aggregate  (cost=7324.49..7324.50 rows=1 width=32) (actual time=34.245..34.390 rows=1 loops=1)
+                                      Buffers: shared hit=4025
+                                      ->  Gather  (cost=7324.28..7324.49 rows=2 width=32) (actual time=34.000..34.378 rows=3 loops=1)
+                                            Workers Planned: 2
+                                            Workers Launched: 2
+                                            Buffers: shared hit=4025
+                                            ->  Partial Aggregate  (cost=6324.28..6324.29 rows=1 width=32) (actual time=18.985..18.986 rows=1 loops=3)
+                                                  Buffers: shared hit=4025
+                                                  ->  Parallel Seq Scan on provider_reviews  (cost=0.00..5864.42 rows=183942 width=4) (actual time=0.005..11.234 rows=147154 loops=3)
+                                                        Buffers: shared hit=4025
+                                ->  Hash Left Join  (cost=48533.96..50441.47 rows=4939 width=90) (actual time=362.166..388.954 rows=4939 loops=1)
+                                      Hash Cond: (sp_1.provider_id = j.provider_id)
+                                      Buffers: shared hit=9783 read=15116, temp read=5187 written=5276
+                                      ->  Hash Join  (cost=225.91..2120.44 rows=4939 width=50) (actual time=1.283..15.660 rows=4939 loops=1)
+                                            Hash Cond: (sp_1.city_id = ci.city_id)
+                                            Buffers: shared hit=1290
+                                            ->  Hash Join  (cost=224.80..2095.37 rows=4939 width=47) (actual time=1.196..14.700 rows=4939 loops=1)
+                                                  Hash Cond: (u_1.user_id = sp_1.user_id)
+                                                  Buffers: shared hit=1289
+                                                  ->  Seq Scan on users u_1  (cost=0.00..1726.15 rows=55015 width=34) (actual time=0.003..4.675 rows=55015 loops=1)
+                                                        Buffers: shared hit=1176
+                                                  ->  Hash  (cost=163.06..163.06 rows=4939 width=21) (actual time=1.156..1.157 rows=4939 loops=1)
+                                                        Buckets: 8192  Batches: 1  Memory Usage: 315kB
+                                                        Buffers: shared hit=113
+                                                        ->  Seq Scan on service_providers sp_1  (cost=0.00..163.06 rows=4939 width=21) (actual time=0.004..0.533 rows=4939 loops=1)
+                                                              Filter: is_active
+                                                              Rows Removed by Filter: 67
+                                                              Buffers: shared hit=113
+                                            ->  Hash  (cost=1.05..1.05 rows=5 width=11) (actual time=0.012..0.013 rows=5 loops=1)
+                                                  Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                                                  Buffers: shared hit=1
+                                                  ->  Seq Scan on cities ci  (cost=0.00..1.05 rows=5 width=11) (actual time=0.007..0.008 rows=5 loops=1)
+                                                        Buffers: shared hit=1
+                                      ->  Hash  (cost=48248.12..48248.12 rows=4795 width=44) (actual time=360.846..372.117 rows=4132 loops=1)
+                                            Buckets: 8192  Batches: 1  Memory Usage: 274kB
+                                            Buffers: shared hit=8493 read=15116, temp read=5187 written=5276
+                                            ->  Subquery Scan on j  (cost=46925.42..48248.12 rows=4795 width=44) (actual time=349.947..371.095 rows=4132 loops=1)
+                                                  Buffers: shared hit=8493 read=15116, temp read=5187 written=5276
+                                                  ->  Finalize GroupAggregate  (cost=46925.42..48200.17 rows=4795 width=44) (actual time=349.946..370.729 rows=4132 loops=1)
+                                                        Group Key: b.provider_id
+                                                        Buffers: shared hit=8493 read=15116, temp read=5187 written=5276
+                                                        ->  Gather Merge  (cost=46925.42..48044.33 rows=9590 width=44) (actual time=349.933..364.418 rows=12388 loops=1)
+                                                              Workers Planned: 2
+                                                              Workers Launched: 2
+                                                              Buffers: shared hit=8493 read=15116, temp read=5187 written=5276
+                                                              ->  Sort  (cost=45925.39..45937.38 rows=4795 width=44) (actual time=331.021..331.597 rows=4129 loops=3)
+                                                                    Sort Key: b.provider_id
+                                                                    Sort Method: quicksort  Memory: 644kB
+                                                                    Buffers: shared hit=8493 read=15116, temp read=5187 written=5276
+                                                                    Worker 0:  Sort Method: quicksort  Memory: 644kB
+                                                                    Worker 1:  Sort Method: quicksort  Memory: 644kB
+                                                                    ->  Partial HashAggregate  (cost=45572.31..45632.24 rows=4795 width=44) (actual time=328.028..329.478 rows=4129 loops=3)
+                                                                          Group Key: b.provider_id
+                                                                          Batches: 1  Memory Usage: 1745kB
+                                                                          Buffers: shared hit=8477 read=15116, temp read=5187 written=5276
+                                                                          Worker 0:  Batches: 1  Memory Usage: 1745kB
+                                                                          Worker 1:  Batches: 1  Memory Usage: 1745kB
+                                                                          ->  Parallel Hash Right Join  (cost=24194.20..43243.22 rows=310545 width=9) (actual time=190.222..276.620 rows=248140 loops=3)
+                                                                                Hash Cond: (p.booking_id = b.booking_id)
+                                                                                Buffers: shared hit=8477 read=15116, temp read=5187 written=5276
+                                                                                ->  Parallel Seq Scan on payments p  (cost=0.00..13952.65 rows=313284 width=9) (actual time=1.084..38.090 rows=250458 loops=3)
+                                                                                      Filter: ((status)::text = 'success'::text)
+                                                                                      Rows Removed by Filter: 21904
+                                                                                      Buffers: shared hit=7004 read=2693
+                                                                                ->  Parallel Hash  (cost=19098.39..19098.39 rows=310545 width=8) (actual time=109.719..109.721 rows=248140 loops=3)
+                                                                                      Buckets: 262144  Batches: 8  Memory Usage: 5760kB
+                                                                                      Buffers: shared hit=1467 read=12423, temp written=2288
+                                                                                      ->  Parallel Seq Scan on bookings b  (cost=0.00..19098.39 rows=310545 width=8) (actual time=0.023..59.772 rows=248140 loops=3)
+                                                                                            Filter: ((status)::text = 'completed'::text)
+                                                                                            Rows Removed by Filter: 85196
+                                                                                            Buffers: shared hit=1467 read=12423
+Planning:
+  Buffers: shared hit=51
+Planning Time: 1.332 ms
+Execution Time: 452.082 ms

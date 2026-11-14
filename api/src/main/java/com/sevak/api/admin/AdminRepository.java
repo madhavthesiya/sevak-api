@@ -24,7 +24,13 @@ public class AdminRepository {
     /** Any fixed number; every app instance must use the same one to share the lock. */
     private static final long VIEW_REFRESH_LOCK = 734_001L;
 
-    private static final String BOOKINGS_SELECT = """
+    /**
+     * A refresh runs in the background, not for a waiting user, so the 5 s request limit does not apply.
+     * At 1M bookings the three views take about 8.5 s together.
+     */
+    private static final int REFRESH_TIMEOUT_SECONDS = 300;
+
+    public static final String BOOKINGS_SELECT = """
             SELECT b.booking_id, cu_u.full_name AS customer_name, pr_u.full_name AS provider_name,
                    b.scheduled_start, b.status, b.total_amount
             FROM bookings b
@@ -34,6 +40,10 @@ public class AdminRepository {
             JOIN users pr_u ON pr_u.user_id = sp.user_id
             """;
 
+    /**
+     * Each payment is split across a booking's categories in proportion to item value, so a mixed booking
+     * isn't counted twice. This is also the definition of mv_category_revenue, which the chart reads.
+     */
     public static final String REVENUE_SQL = """
                         WITH item_totals AS (
                             SELECT bi.booking_id,
@@ -66,6 +76,13 @@ public class AdminRepository {
                         GROUP BY cmp.status
                         ORDER BY count DESC, cmp.status
                         """;
+
+    /** The admin chart reads the stored copy; REVENUE_SQL below is how it is calculated. */
+    public static final String CATEGORY_REVENUE_SQL = """
+            SELECT category_name, total_bookings, total_revenue
+            FROM mv_category_revenue
+            ORDER BY total_revenue DESC, category_name
+            """;
 
     public static final String LEADERBOARD_LIVE_SQL = """
             SELECT lb.*, u.full_name AS provider_name
@@ -124,7 +141,13 @@ public class AdminRepository {
     }
 
     /** Each payment is split across categories in proportion to item value, so nothing is counted twice. */
+    /** The stored summary, refreshed every 15 minutes. */
     public List<CategoryRevenue> findRevenueByCategory() {
+        return jdbc.sql(CATEGORY_REVENUE_SQL).query(CategoryRevenue.class).list();
+    }
+
+    /** The same numbers calculated from the live tables. Slow on a large database; used by tests. */
+    public List<CategoryRevenue> computeRevenueByCategory() {
         return jdbc.sql(REVENUE_SQL).query(CategoryRevenue.class).list();
     }
 
@@ -197,8 +220,10 @@ public class AdminRepository {
                 }
             }
             try (var statement = connection.createStatement()) {
+                statement.setQueryTimeout(REFRESH_TIMEOUT_SECONDS);
                 statement.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_provider_leaderboard");
                 statement.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_city_revenue_summary");
+                statement.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_category_revenue");
                 return true;
             } finally {
                 try (PreparedStatement unlock = connection.prepareStatement("SELECT pg_advisory_unlock(?)")) {

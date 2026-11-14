@@ -1,0 +1,52 @@
+Busiest customer, single-column
+
+Limit  (cost=2327.85..2558.50 rows=20 width=78) (actual time=1.648..1.723 rows=20 loops=1)
+  Buffers: shared hit=2157
+  ->  Result  (cost=2327.85..7321.53 rows=433 width=78) (actual time=1.647..1.720 rows=20 loops=1)
+        Buffers: shared hit=2157
+        ->  Sort  (cost=2327.85..2328.93 rows=433 width=46) (actual time=1.609..1.611 rows=20 loops=1)
+              Sort Key: b.scheduled_start DESC, b.booking_id DESC
+              Sort Method: top-N heapsort  Memory: 29kB
+              Buffers: shared hit=2076
+              ->  Nested Loop  (cost=233.71..2316.33 rows=433 width=46) (actual time=0.794..1.507 rows=498 loops=1)
+                    Buffers: shared hit=2076
+                    ->  Hash Join  (cost=233.42..1723.36 rows=433 width=38) (actual time=0.778..1.096 rows=498 loops=1)
+                          Hash Cond: (b.provider_id = sp.provider_id)
+                          Buffers: shared hit=582
+                          ->  Bitmap Heap Scan on bookings b  (cost=7.78..1496.59 rows=433 width=38) (actual time=0.095..0.350 rows=498 loops=1)
+                                Recheck Cond: (customer_id = 20508)
+                                Heap Blocks: exact=465
+                                Buffers: shared hit=469
+                                ->  Bitmap Index Scan on idx_bookings_customer  (cost=0.00..7.67 rows=433 width=0) (actual time=0.053..0.053 rows=498 loops=1)
+                                      Index Cond: (customer_id = 20508)
+                                      Buffers: shared hit=4
+                          ->  Hash  (cost=163.06..163.06 rows=5006 width=8) (actual time=0.658..0.658 rows=5006 loops=1)
+                                Buckets: 8192  Batches: 1  Memory Usage: 260kB
+                                Buffers: shared hit=113
+                                ->  Seq Scan on service_providers sp  (cost=0.00..163.06 rows=5006 width=8) (actual time=0.003..0.314 rows=5006 loops=1)
+                                      Buffers: shared hit=113
+                    ->  Index Scan using users_pkey on users u  (cost=0.29..1.37 rows=1 width=16) (actual time=0.001..0.001 rows=1 loops=498)
+                          Index Cond: (user_id = sp.user_id)
+                          Buffers: shared hit=1494
+        SubPlan 1
+          ->  Aggregate  (cost=11.51..11.52 rows=1 width=32) (actual time=0.005..0.005 rows=1 loops=20)
+                Buffers: shared hit=81
+                ->  Sort  (cost=11.50..11.50 rows=2 width=24) (actual time=0.004..0.004 rows=2 loops=20)
+                      Sort Key: bi.item_no
+                      Sort Method: quicksort  Memory: 25kB
+                      Buffers: shared hit=81
+                      ->  Hash Join  (cost=1.70..11.49 rows=2 width=24) (actual time=0.003..0.003 rows=2 loops=20)
+                            Hash Cond: (bi.service_id = s.service_id)
+                            Buffers: shared hit=81
+                            ->  Index Scan using booking_items_pkey on booking_items bi  (cost=0.43..10.21 rows=2 width=8) (actual time=0.002..0.002 rows=2 loops=20)
+                                  Index Cond: (booking_id = b.booking_id)
+                                  Buffers: shared hit=80
+                            ->  Hash  (cost=1.12..1.12 rows=12 width=24) (actual time=0.007..0.007 rows=12 loops=1)
+                                  Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                                  Buffers: shared hit=1
+                                  ->  Seq Scan on services s  (cost=0.00..1.12 rows=12 width=24) (actual time=0.005..0.005 rows=12 loops=1)
+                                        Buffers: shared hit=1
+Planning:
+  Buffers: shared hit=28
+Planning Time: 0.544 ms
+Execution Time: 1.842 ms

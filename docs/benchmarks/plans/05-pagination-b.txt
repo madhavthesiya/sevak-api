@@ -1,0 +1,54 @@
+OFFSET, page 5,000, no index
+
+Limit  (cost=92456.35..92459.31 rows=20 width=50) (actual time=861.013..875.425 rows=20 loops=1)
+  Buffers: shared hit=19295 read=11655, temp read=1963 written=7204
+  ->  Nested Loop  (cost=77627.07..225951.00 rows=1000010 width=50) (actual time=776.476..870.602 rows=100000 loops=1)
+        Buffers: shared hit=19295 read=11655, temp read=1963 written=7204
+        ->  Gather Merge  (cost=77626.77..194094.41 rows=1000010 width=42) (actual time=776.310..818.178 rows=100000 loops=1)
+              Workers Planned: 2
+              Workers Launched: 2
+              Buffers: shared hit=4895 read=11655, temp read=1963 written=7204
+              ->  Sort  (cost=76626.74..77668.42 rows=416671 width=42) (actual time=751.513..756.433 rows=33917 loops=3)
+                    Sort Key: b.scheduled_start DESC, b.booking_id DESC
+                    Sort Method: external merge  Disk: 19120kB
+                    Buffers: shared hit=4895 read=11655, temp read=1963 written=7204
+                    Worker 0:  Sort Method: external merge  Disk: 19160kB
+                    Worker 1:  Sort Method: external merge  Disk: 19160kB
+                    ->  Hash Join  (cost=3573.94..24913.03 rows=416671 width=42) (actual time=28.437..475.661 rows=333337 loops=3)
+                          Hash Cond: (b.provider_id = sp.provider_id)
+                          Buffers: shared hit=4803 read=11655
+                          ->  Parallel Hash Join  (cost=3348.30..23592.71 rows=416671 width=42) (actual time=25.994..384.335 rows=333337 loops=3)
+                                Hash Cond: (cu.user_id = cu_u.user_id)
+                                Buffers: shared hit=4368 read=11655
+                                ->  Hash Join  (cost=1444.16..20594.72 rows=416671 width=34) (actual time=16.923..244.467 rows=333337 loops=3)
+                                      Hash Cond: (b.customer_id = cu.customer_id)
+                                      Buffers: shared hit=3192 read=11655
+                                      ->  Parallel Seq Scan on bookings b  (cost=0.00..18056.71 rows=416671 width=34) (actual time=0.037..77.034 rows=333337 loops=3)
+                                            Buffers: shared hit=2235 read=11655
+                                      ->  Hash  (cost=819.07..819.07 rows=50007 width=8) (actual time=16.458..16.459 rows=50007 loops=3)
+                                            Buckets: 65536  Batches: 1  Memory Usage: 2466kB
+                                            Buffers: shared hit=957
+                                            ->  Seq Scan on customers cu  (cost=0.00..819.07 rows=50007 width=8) (actual time=0.032..6.145 rows=50007 loops=3)
+                                                  Buffers: shared hit=957
+                                ->  Parallel Hash  (cost=1499.62..1499.62 rows=32362 width=16) (actual time=8.721..8.722 rows=18338 loops=3)
+                                      Buckets: 65536  Batches: 1  Memory Usage: 3296kB
+                                      Buffers: shared hit=1176
+                                      ->  Parallel Seq Scan on users cu_u  (cost=0.00..1499.62 rows=32362 width=16) (actual time=0.007..8.896 rows=55015 loops=1)
+                                            Buffers: shared hit=1176
+                          ->  Hash  (cost=163.06..163.06 rows=5006 width=8) (actual time=1.747..1.747 rows=5006 loops=3)
+                                Buckets: 8192  Batches: 1  Memory Usage: 260kB
+                                Buffers: shared hit=339
+                                ->  Seq Scan on service_providers sp  (cost=0.00..163.06 rows=5006 width=8) (actual time=0.048..0.873 rows=5006 loops=3)
+                                      Buffers: shared hit=339
+        ->  Memoize  (cost=0.30..1.38 rows=1 width=16) (actual time=0.000..0.000 rows=1 loops=100000)
+              Cache Key: sp.user_id
+              Cache Mode: logical
+              Hits: 95200  Misses: 4800  Evictions: 0  Overflows: 0  Memory Usage: 552kB
+              Buffers: shared hit=14400
+              ->  Index Scan using users_pkey on users pr_u  (cost=0.29..1.37 rows=1 width=16) (actual time=0.001..0.001 rows=1 loops=4800)
+                    Index Cond: (user_id = sp.user_id)
+                    Buffers: shared hit=14400
+Planning:
+  Buffers: shared hit=48
+Planning Time: 2.353 ms
+Execution Time: 880.939 ms

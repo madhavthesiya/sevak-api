@@ -304,8 +304,15 @@ class FrontendApiTest extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sql", containsString("avg_city_rating")))
                 .andExpect(jsonPath("$.techniques", hasItem("Derived table")))
-                .andExpect(jsonPath("$.measuredMs", nullValue()))
+                .andExpect(jsonPath("$.measuredMs").isNumber())
                 .andExpect(jsonPath("$.explainable").value(true));
+    }
+
+    @Test
+    void aStatementThatWritesHasNoTiming() throws Exception {
+        mvc.perform(get("/api/v1/meta/queries/bookings.create"))
+                .andExpect(jsonPath("$.measuredMs", nullValue()))
+                .andExpect(jsonPath("$.explainable").value(false));
     }
 
     @Test

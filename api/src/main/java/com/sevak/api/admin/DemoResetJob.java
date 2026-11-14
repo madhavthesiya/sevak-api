@@ -12,14 +12,18 @@ public class DemoResetJob {
     private static final Logger log = LoggerFactory.getLogger(DemoResetJob.class);
 
     private final DemoResetService service;
+    private final AdminService admin;
 
-    public DemoResetJob(DemoResetService service) {
+    public DemoResetJob(DemoResetService service, AdminService admin) {
         this.service = service;
+        this.admin = admin;
     }
 
     @Scheduled(cron = "${sevak.demo.reset-cron}", zone = "Asia/Kolkata")
     public void reset() {
         service.reset();
+        // After the reset's transaction has committed, so the stored summaries see the new data.
+        admin.refreshViews();
         log.info("Demo data has been reset");
     }
 }

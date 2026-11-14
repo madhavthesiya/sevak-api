@@ -1,0 +1,59 @@
+Old query, with the trigram index
+
+Limit  (cost=7724.48..7724.50 rows=10 width=103) (actual time=35.136..38.849 rows=10 loops=1)
+  Buffers: shared hit=5480
+  ->  Sort  (cost=7724.48..7724.81 rows=132 width=103) (actual time=35.135..38.845 rows=10 loops=1)
+        Sort Key: ((sp.review_count = 0)), (((('5'::numeric * (avg(provider_reviews.rating))) + (COALESCE(sp.avg_rating, '0'::numeric) * (sp.review_count)::numeric)) / ((5 + sp.review_count))::numeric)) DESC, sp.provider_id, s.service_id
+        Sort Method: top-N heapsort  Memory: 26kB
+        Buffers: shared hit=5480
+        ->  Nested Loop  (cost=7385.90..7721.63 rows=132 width=103) (actual time=32.858..38.406 rows=466 loops=1)
+              Buffers: shared hit=5480
+              ->  Finalize Aggregate  (cost=7324.49..7324.50 rows=1 width=32) (actual time=31.856..35.557 rows=1 loops=1)
+                    Buffers: shared hit=4025
+                    ->  Gather  (cost=7324.28..7324.49 rows=2 width=32) (actual time=31.696..35.542 rows=3 loops=1)
+                          Workers Planned: 2
+                          Workers Launched: 2
+                          Buffers: shared hit=4025
+                          ->  Partial Aggregate  (cost=6324.28..6324.29 rows=1 width=32) (actual time=18.893..18.894 rows=1 loops=3)
+                                Buffers: shared hit=4025
+                                ->  Parallel Seq Scan on provider_reviews  (cost=0.00..5864.42 rows=183942 width=4) (actual time=0.005..11.315 rows=147154 loops=3)
+                                      Buffers: shared hit=4025
+              ->  Nested Loop  (cost=61.41..393.16 rows=132 width=70) (actual time=0.992..2.469 rows=466 loops=1)
+                    Buffers: shared hit=1455
+                    ->  Hash Join  (cost=61.12..204.56 rows=132 width=62) (actual time=0.971..1.748 rows=466 loops=1)
+                          Hash Cond: (sp.provider_id = ps.provider_id)
+                          Buffers: shared hit=57
+                          ->  Nested Loop  (cost=16.03..154.60 rows=948 width=28) (actual time=0.089..0.615 rows=1401 loops=1)
+                                Buffers: shared hit=39
+                                ->  Seq Scan on cities ci  (cost=0.00..1.07 rows=1 width=11) (actual time=0.015..0.021 rows=1 loops=1)
+                                      Filter: (lower((city_name)::text) = 'mumbai'::text)
+                                      Rows Removed by Filter: 4
+                                      Buffers: shared hit=1
+                                ->  Bitmap Heap Scan on service_providers sp  (cost=16.03..144.04 rows=948 width=25) (actual time=0.070..0.424 rows=1401 loops=1)
+                                      Recheck Cond: (city_id = ci.city_id)
+                                      Filter: (is_active AND ((verification_status)::text = 'verified'::text))
+                                      Heap Blocks: exact=35
+                                      Buffers: shared hit=38
+                                      ->  Bitmap Index Scan on idx_providers_city  (cost=0.00..15.79 rows=1001 width=0) (actual time=0.049..0.049 rows=1401 loops=1)
+                                            Index Cond: (city_id = ci.city_id)
+                                            Buffers: shared hit=3
+                          ->  Hash  (cost=36.39..36.39 rows=696 width=38) (actual time=0.841..0.843 rows=1670 loops=1)
+                                Buckets: 2048 (originally 1024)  Batches: 1 (originally 1)  Memory Usage: 132kB
+                                Buffers: shared hit=18
+                                ->  Nested Loop  (cost=0.29..36.39 rows=696 width=38) (actual time=0.040..0.521 rows=1670 loops=1)
+                                      Buffers: shared hit=18
+                                      ->  Seq Scan on services s  (cost=0.00..1.15 rows=1 width=29) (actual time=0.009..0.018 rows=2 loops=1)
+                                            Filter: ((service_name)::text ~~* '%clean%'::text)
+                                            Rows Removed by Filter: 10
+                                            Buffers: shared hit=1
+                                      ->  Index Scan using idx_provider_services_service on provider_services ps  (cost=0.29..28.28 rows=696 width=13) (actual time=0.016..0.153 rows=835 loops=2)
+                                            Index Cond: (service_id = s.service_id)
+                                            Filter: is_active
+                                            Buffers: shared hit=17
+                    ->  Index Scan using users_pkey on users u  (cost=0.29..1.43 rows=1 width=16) (actual time=0.001..0.001 rows=1 loops=466)
+                          Index Cond: (user_id = sp.user_id)
+                          Buffers: shared hit=1398
+Planning:
+  Buffers: shared hit=45
+Planning Time: 1.335 ms
+Execution Time: 39.000 ms

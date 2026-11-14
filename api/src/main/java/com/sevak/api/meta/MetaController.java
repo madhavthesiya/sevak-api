@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class MetaController {
 
     /**
-     * @param measuredMs the benchmark from the performance write-up; null until one has been measured
+     * @param measuredMs median time from QueryBenchmark on the large dataset; null if not measured
      */
     public record QueryInfo(
             String key,
@@ -34,10 +34,12 @@ public class MetaController {
     public record ExplainResult(String key, List<String> plan) {}
 
     private final QueryCatalog catalog;
+    private final QueryTimings timings;
     private final JdbcClient jdbc;
 
-    public MetaController(QueryCatalog catalog, JdbcClient jdbc) {
+    public MetaController(QueryCatalog catalog, QueryTimings timings, JdbcClient jdbc) {
         this.catalog = catalog;
+        this.timings = timings;
         this.jdbc = jdbc;
     }
 
@@ -51,7 +53,7 @@ public class MetaController {
                 entry.techniques(),
                 entry.description(),
                 entry.sql(),
-                null,
+                timings.medianMs(key).orElse(null),
                 entry.explainParams() != null);
     }
 

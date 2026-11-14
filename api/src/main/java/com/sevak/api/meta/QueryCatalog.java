@@ -65,16 +65,16 @@ public class QueryCatalog {
         add(
                 "providers.search",
                 "Provider search",
-                List.of("CTE", "Bayesian rating", "ILIKE with trigram index", "EXISTS"),
-                "Finds verified providers for a service and city. A CTE supplies the platform average, so one"
-                        + " 5-star review can't outrank fifty excellent ones.",
+                List.of("Materialized view", "Bayesian rating", "ILIKE", "EXISTS"),
+                "Finds verified providers for a service and city, ranked by the leaderboard's stored Bayesian"
+                        + " score, so one 5-star review can't outrank fifty excellent ones.",
                 ProviderRepository.SEARCH_SQL,
                 params("service", "%clean%", "city", "Ahmedabad", "day", 1, "limit", 10, "offset", 0));
         add(
                 "providers.top",
                 "Top rated providers",
-                List.of("View", "RANK() window function", "Bayesian rating"),
-                "Reads the leaderboard view, keeping only verified providers.",
+                List.of("Materialized view", "RANK() window function", "Bayesian rating"),
+                "Reads the stored leaderboard, keeping only verified providers. It is refreshed every 15 minutes.",
                 ProviderRepository.TOP_SQL,
                 params("limit", 5));
         add(
@@ -173,9 +173,17 @@ public class QueryCatalog {
         add(
                 "admin.revenue",
                 "Revenue by category",
-                List.of("CTE", "Window function", "Proportional split"),
-                "Splits each payment across its categories by item value, so a mixed booking isn't counted twice.",
-                AdminRepository.REVENUE_SQL,
+                List.of("Materialized view", "CTE", "Window function", "Proportional split"),
+                "Reads a stored summary rebuilt every 15 minutes, because calculating it live took 4.7 seconds at"
+                        + " 1M bookings. A window function splits each payment across its categories by item value,"
+                        + " so a mixed booking isn't counted twice.",
+                AdminRepository.CATEGORY_REVENUE_SQL + "\n-- The stored copy is rebuilt every 15 minutes by:\n"
+                        + AdminRepository.REVENUE_SQL
+                                .strip()
+                                .lines()
+                                .map(l -> "-- " + l)
+                                .reduce((a, b) -> a + "\n" + b)
+                                .orElse(""),
                 params());
         add(
                 "admin.cityRevenue",
